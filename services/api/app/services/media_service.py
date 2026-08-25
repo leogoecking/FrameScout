@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Set
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -40,7 +40,17 @@ class MediaService:
             .order_by(MediaCandidate.fidelity_score.desc(), MediaCandidate.created_at.desc())
         )
         res = await db.execute(query)
-        return list(res.scalars().all())
+        all_candidates = list(res.scalars().all())
+
+        # Deduplicar por external_id mantendo o melhor ranqueamento
+        seen_external: Set[str] = set()
+        deduped_candidates: List[MediaCandidate] = []
+        for candidate in all_candidates:
+            if candidate.external_id not in seen_external:
+                seen_external.add(candidate.external_id)
+                deduped_candidates.append(candidate)
+
+        return deduped_candidates
 
     @staticmethod
     async def search_for_query(
@@ -54,7 +64,7 @@ class MediaService:
         )
         search_query = sq_res.scalar_one_or_none()
         if not search_query:
-            raise ValueError("Query de busca não encontrada")
+            raise KeyError("Query de busca não encontrada")
 
         provider = PexelsProvider()
         raw_candidates = await provider.search(
@@ -110,7 +120,7 @@ class MediaService:
         scene_res = await db.execute(select(Scene).where(Scene.id == scene_id))
         scene = scene_res.scalar_one_or_none()
         if not scene:
-            raise ValueError("Cena não encontrada")
+            raise KeyError("Cena não encontrada")
 
         # Buscar todas as queries da cena
         queries_res = await db.execute(
@@ -133,4 +143,12 @@ class MediaService:
             )
             all_candidates.extend(candidates)
 
-        return all_candidates
+        # Deduplicar por external_id
+        seen_external: Set[str] = set()
+        deduped: List[MediaCandidate] = []
+        for c in all_candidates:
+            if c.external_id not in seen_external:
+                seen_external.add(c.external_id)
+                deduped.append(c)
+
+        return deduped

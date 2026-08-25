@@ -9,7 +9,8 @@ import {
   Image as ImageIcon, 
   ExternalLink, 
   Copy, 
-  Check 
+  Check,
+  AlertTriangle
 } from "lucide-react";
 
 interface MediaCandidateCardProps {
@@ -18,6 +19,7 @@ interface MediaCandidateCardProps {
 
 export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
   const [copied, setCopied] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const isVideo = candidate.media_type === "VIDEO";
 
   const handleCopyLink = async () => {
@@ -41,16 +43,20 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
     <div className="group relative bg-slate-950/80 border border-white/10 hover:border-blue-500/40 rounded-2xl overflow-hidden shadow-lg transition-all flex flex-col justify-between">
       {/* Thumbnail Area */}
       <div className="relative aspect-video w-full bg-slate-900 overflow-hidden">
-        {candidate.preview_url ? (
+        {candidate.preview_url && !imgError ? (
           <img
             src={candidate.preview_url}
             alt={candidate.title || "Mídia Pexels"}
+            onError={() => setImgError(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-600">
-            {isVideo ? <Film className="h-8 w-8" /> : <ImageIcon className="h-8 w-8" />}
+          <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-900 gap-1.5 p-4 text-center">
+            {isVideo ? <Film className="h-8 w-8 text-slate-500" /> : <ImageIcon className="h-8 w-8 text-slate-500" />}
+            <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3 text-amber-500/70" /> Prévia indisponível
+            </span>
           </div>
         )}
 
