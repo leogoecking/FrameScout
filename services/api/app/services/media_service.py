@@ -80,11 +80,17 @@ class MediaService:
         providers_map = get_providers_map()
         selected_providers: List[MediaProvider] = []
 
+        q_type = (
+            QueryType(search_query.query_type)
+            if isinstance(search_query.query_type, str)
+            else search_query.query_type
+        )
+
         if provider_name and provider_name.lower() in providers_map:
             selected_providers.append(providers_map[provider_name.lower()])
         else:
             # Seleção automática por intenção de busca
-            if search_query.query_type in [
+            if q_type in [
                 QueryType.EVENT,
                 QueryType.OFFICIAL,
                 QueryType.COMPANY,
@@ -102,7 +108,7 @@ class MediaService:
             results = await prov.search(
                 query=SearchQueryBase(
                     query=search_query.query,
-                    query_type=search_query.query_type,
+                    query_type=q_type,
                     priority=search_query.priority,
                 ),
                 limit=limit_per_prov,

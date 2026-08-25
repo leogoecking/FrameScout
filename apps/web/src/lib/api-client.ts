@@ -10,7 +10,11 @@ import {
   SceneSplitRequest,
   SearchQuery,
   SearchQueryCreate,
-  SearchQueryUpdate
+  SearchQueryUpdate,
+  SelectedAsset,
+  SelectedAssetCreate,
+  SelectedAssetUpdate,
+  VisualPlanExport
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -360,6 +364,72 @@ export async function getCandidate(candidateId: string): Promise<MediaCandidate>
   });
   if (!res.ok) {
     const msg = await parseErrorMessage(res, `Failed to get candidate: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+// --- Selected Assets & Visual Plan ---
+
+export async function selectAssetForScene(
+  sceneId: string,
+  data: SelectedAssetCreate
+): Promise<SelectedAsset> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/assets/select`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to select asset: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function listSceneSelectedAssets(sceneId: string): Promise<SelectedAsset[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/assets`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to list selected assets: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function updateSelectedAsset(
+  assetId: string,
+  data: SelectedAssetUpdate
+): Promise<SelectedAsset> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/selected-assets/${assetId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to update selected asset: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function removeSelectedAsset(assetId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/selected-assets/${assetId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok && res.status !== 204) {
+    const msg = await parseErrorMessage(res, `Failed to remove selected asset: ${res.status}`);
+    throw new Error(msg);
+  }
+}
+
+export async function exportProjectVisualPlan(projectId: string): Promise<VisualPlanExport> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/visual-plan`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to export visual plan: ${res.status}`);
     throw new Error(msg);
   }
   return await res.json();

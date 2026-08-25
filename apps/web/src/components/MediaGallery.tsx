@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MediaCandidate } from "@/types";
-import { listSceneCandidates, searchSceneMedia } from "@/lib/api-client";
+import { MediaCandidate, SelectedAsset } from "@/types";
+import { 
+  listSceneCandidates, 
+  searchSceneMedia, 
+  listSceneSelectedAssets, 
+  selectAssetForScene, 
+  removeSelectedAsset 
+} from "@/lib/api-client";
 import { MediaCandidateCard } from "@/components/MediaCandidateCard";
 import { 
   Sparkles, 
@@ -16,33 +22,40 @@ interface MediaGalleryProps {
   sceneId: string;
   hasQueries: boolean;
   initialCandidates?: MediaCandidate[];
+  onAssetSelected?: () => void;
 }
 
 export function MediaGallery({
   sceneId,
   hasQueries,
   initialCandidates = [],
+  onAssetSelected,
 }: MediaGalleryProps) {
   const [candidates, setCandidates] = useState<MediaCandidate[]>(initialCandidates);
+  const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
   const [filter, setFilter] = useState<"ALL" | "PEXELS" | "WIKIMEDIA" | "IMAGE" | "VIDEO">("ALL");
   const [selectedProvider, setSelectedProvider] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-fetch candidates when sceneId changes
+  // Auto-fetch candidates and selected assets when sceneId changes
   useEffect(() => {
     let isMounted = true;
-    async function loadCandidates() {
+    async function loadData() {
       try {
-        const data = await listSceneCandidates(sceneId);
+        const [candsData, assetsData] = await Promise.all([
+          listSceneCandidates(sceneId),
+          listSceneSelectedAssets(sceneId),
+        ]);
         if (isMounted) {
-          setCandidates(data);
+          setCandidates(candsData);
+          setSelectedAsset(assetsData.length > 0 ? assetsData[0] : null);
         }
       } catch {
         // Silently keep current state if load fails
       }
     }
-    loadCandidates();
+    loadData();
     return () => {
       isMounted = false;
     };
@@ -65,6 +78,30 @@ export function MediaGallery({
       setError(err?.message || "Erro ao buscar mídias.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectAsset = async (candidateId: string, framingMode: string) => {
+    try {
+      const res = await selectAssetForScene(sceneId, {
+        media_candidate_id: candidateId,
+        framing_mode: framingMode,
+      });
+      setSelectedAsset(res);
+      if (onAssetSelected) onAssetSelected();
+    } catch (err: any) {
+      setError(err?.message || "Erro ao fixar mídia na cena.");
+    }
+  };
+
+  const handleDeselectAsset = async () => {
+    if (!selectedAsset) return;
+    try {
+      await removeSelectedAsset(selectedAsset.id);
+      setSelectedAsset(null);
+      if (onAssetSelected) onAssetSelected();
+    } catch (err: any) {
+      setError(err?.message || "Erro ao remover mídia da cena.");
     }
   };
 
@@ -206,9 +243,19 @@ export function MediaGallery({
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {filteredCandidates.map((candidate) => (
-            <MediaCandidateCard key={candidate.id} candidate={candidate} />
-          ))}
+          {filteredCandidates.map((candidate) => {
+            const isSelected = selectedAsset?.media_candidate_id === candidate.id;
+            return (
+              <MediaCandidateCard
+                key={candidate.id}
+                candidate={candidate}
+                isSelected={isSelected}
+                currentFramingMode={isSelected ? selectedAsset?.framing_mode : "FILL"}
+                onSelect={handleSelectAsset}
+                onDeselect={handleDeselectAsset}
+              />
+            );
+          })}
         </div>
       )}
     </div>

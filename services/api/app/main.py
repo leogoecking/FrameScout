@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.assets import router as assets_router
 from app.api.v1.health import router as health_router
 from app.api.v1.media import router as media_router
 from app.api.v1.projects import router as projects_router
@@ -52,6 +53,7 @@ def create_application() -> FastAPI:
     app.include_router(scenes_router, prefix=settings.API_V1_PREFIX)
     app.include_router(queries_router, prefix=settings.API_V1_PREFIX)
     app.include_router(media_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(assets_router, prefix=settings.API_V1_PREFIX)
 
     return app
 

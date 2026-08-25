@@ -5,16 +5,9 @@ export type RightsStatus =
   | "REFERENCE_ONLY" 
   | "BLOCKED";
 
-export type MediaType = "IMAGE" | "VIDEO" | "AUDIO";
+export type MediaType = "IMAGE" | "VIDEO";
 
-export type QueryType =
-  | "OFFICIAL"
-  | "EVENT"
-  | "COMPANY"
-  | "PERSON"
-  | "LOCATION"
-  | "CONCEPT"
-  | "BROLL";
+export type QueryType = "EVENT" | "OFFICIAL" | "BROLL" | "CONCEPT" | "COMPANY" | "PERSON" | "LOCATION";
 
 export interface Project {
   id: string;
@@ -33,8 +26,8 @@ export interface ProjectCreate {
 }
 
 export interface ProjectUpdate {
-  name?: string | null;
-  language?: string | null;
+  name?: string;
+  language?: string;
   script_raw?: string | null;
 }
 
@@ -45,7 +38,6 @@ export interface SearchQuery {
   query_type: QueryType;
   priority: number;
   created_at: string;
-  media_candidates?: MediaCandidate[];
 }
 
 export interface SearchQueryCreate {
@@ -55,9 +47,9 @@ export interface SearchQueryCreate {
 }
 
 export interface SearchQueryUpdate {
-  query?: string | null;
-  query_type?: QueryType | null;
-  priority?: number | null;
+  query?: string;
+  query_type?: QueryType;
+  priority?: number;
 }
 
 export interface MediaCandidate {
@@ -77,8 +69,32 @@ export interface MediaCandidate {
   attribution?: string | null;
   rights_status: RightsStatus;
   fidelity_score?: number | null;
-  metadata_json?: Record<string, unknown>;
+  metadata_json?: Record<string, any>;
   created_at: string;
+}
+
+export interface SelectedAsset {
+  id: string;
+  scene_id: string;
+  media_candidate_id: string;
+  order_index: number;
+  framing_mode: string;
+  notes?: string | null;
+  created_at: string;
+  media_candidate?: MediaCandidate | null;
+}
+
+export interface SelectedAssetCreate {
+  media_candidate_id: string;
+  order_index?: number;
+  framing_mode?: string;
+  notes?: string | null;
+}
+
+export interface SelectedAssetUpdate {
+  order_index?: number;
+  framing_mode?: string;
+  notes?: string | null;
 }
 
 export interface Scene {
@@ -93,10 +109,11 @@ export interface Scene {
   created_at: string;
   updated_at: string;
   queries?: SearchQuery[];
+  selected_assets?: SelectedAsset[];
 }
 
 export interface SceneCreate {
-  position?: number | null;
+  position?: number;
   title?: string | null;
   narration: string;
   visual_intent?: string | null;
@@ -105,9 +122,9 @@ export interface SceneCreate {
 }
 
 export interface SceneUpdate {
-  position?: number | null;
+  position?: number;
   title?: string | null;
-  narration?: string | null;
+  narration?: string;
   visual_intent?: string | null;
   start_estimate?: number | null;
   end_estimate?: number | null;
@@ -116,17 +133,40 @@ export interface SceneUpdate {
 export interface SceneSplitRequest {
   first_part_narration: string;
   second_part_narration: string;
-  first_part_title?: string | null;
-  second_part_title?: string | null;
-  first_part_visual_intent?: string | null;
-  second_part_visual_intent?: string | null;
+  first_part_title?: string;
+  second_part_title?: string;
+  first_part_visual_intent?: string;
+  second_part_visual_intent?: string;
+}
+
+export interface SceneVisualPlanItem {
+  scene_position: number;
+  scene_title: string;
+  narration: string;
+  visual_intent?: string | null;
+  start_estimate: number;
+  end_estimate: number;
+  duration: number;
+  selected_asset?: SelectedAsset | null;
+}
+
+export interface VisualPlanExport {
+  project_id: string;
+  project_name: string;
+  language: string;
+  total_scenes: number;
+  covered_scenes_count: number;
+  total_duration_seconds: number;
+  scenes: SceneVisualPlanItem[];
+  consolidated_attributions: string[];
+  markdown_document: string;
 }
 
 export interface HealthData {
-  status: "ok" | "degraded" | "error";
+  status: string;
   service: string;
   environment: string;
   version: string;
-  database: "connected" | "disconnected";
+  database: string;
   timestamp: string;
 }

@@ -12,11 +12,13 @@ from sqlalchemy import (
     Text,
     Uuid,
 )
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.domain.enums import MediaType, QueryType, RightsStatus
+from app.domain.enums import MediaType, RightsStatus
 
 
 def utc_now() -> datetime:
@@ -73,10 +75,16 @@ class Scene(Base):
     # Relationships
     project: Mapped["Project"] = relationship("Project", back_populates="scenes")
     queries: Mapped[List["SearchQuery"]] = relationship(
-        "SearchQuery", back_populates="scene", cascade="all, delete-orphan"
+        "SearchQuery",
+        back_populates="scene",
+        cascade="all, delete-orphan",
+        order_by="SearchQuery.priority",
     )
     selected_assets: Mapped[List["SelectedAsset"]] = relationship(
-        "SelectedAsset", back_populates="scene", cascade="all, delete-orphan"
+        "SelectedAsset",
+        back_populates="scene",
+        cascade="all, delete-orphan",
+        order_by="SelectedAsset.order_index",
     )
 
 
@@ -90,9 +98,7 @@ class SearchQuery(Base):
         Uuid(as_uuid=True), ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False
     )
     query: Mapped[str] = mapped_column(String(500), nullable=False)
-    query_type: Mapped[QueryType] = mapped_column(
-        SQLEnum(QueryType), default=QueryType.BROLL, nullable=False
-    )
+    query_type: Mapped[str] = mapped_column(String(50), default="BROLL", nullable=False)
     priority: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
@@ -100,6 +106,9 @@ class SearchQuery(Base):
 
     # Relationships
     scene: Mapped["Scene"] = relationship("Scene", back_populates="queries")
+    media_candidates: Mapped[List["MediaCandidate"]] = relationship(
+        "MediaCandidate", back_populates="search_query"
+    )
 
 
 class MediaCandidate(Base):
@@ -134,6 +143,14 @@ class MediaCandidate(Base):
         DateTime(timezone=True), default=utc_now, nullable=False
     )
 
+    # Relationships
+    search_query: Mapped[Optional["SearchQuery"]] = relationship(
+        "SearchQuery", back_populates="media_candidates"
+    )
+    selected_assets: Mapped[List["SelectedAsset"]] = relationship(
+        "SelectedAsset", back_populates="media_candidate"
+    )
+
 
 class SelectedAsset(Base):
     __tablename__ = "selected_assets"
@@ -148,6 +165,7 @@ class SelectedAsset(Base):
         Uuid(as_uuid=True), ForeignKey("media_candidates.id", ondelete="CASCADE"), nullable=False
     )
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    framing_mode: Mapped[str] = mapped_column(String(50), default="FILL", nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
@@ -155,4 +173,6 @@ class SelectedAsset(Base):
 
     # Relationships
     scene: Mapped["Scene"] = relationship("Scene", back_populates="selected_assets")
-    media_candidate: Mapped["MediaCandidate"] = relationship("MediaCandidate")
+    media_candidate: Mapped["MediaCandidate"] = relationship(
+        "MediaCandidate", back_populates="selected_assets"
+    )

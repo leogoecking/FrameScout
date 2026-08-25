@@ -5,19 +5,25 @@ import { useState } from "react";
 import { MediaCandidate, RightsStatus } from "@/types";
 import { 
   ShieldCheck, 
-  AlertCircle,
-  HelpCircle,
+  AlertCircle, 
+  HelpCircle, 
   Film, 
   Image as ImageIcon, 
   ExternalLink, 
   Copy, 
-  Check,
-  AlertTriangle,
-  FileText
+  Check, 
+  AlertTriangle, 
+  FileText,
+  Pin,
+  Maximize2
 } from "lucide-react";
 
 interface MediaCandidateCardProps {
   candidate: MediaCandidate;
+  isSelected?: boolean;
+  currentFramingMode?: string;
+  onSelect?: (candidateId: string, framingMode: string) => Promise<void>;
+  onDeselect?: (candidateId: string) => Promise<void>;
 }
 
 const rightsBadgeStyles: Record<
@@ -66,12 +72,20 @@ const rightsBadgeStyles: Record<
   },
 };
 
-export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
+export function MediaCandidateCard({
+  candidate,
+  isSelected = false,
+  currentFramingMode = "FILL",
+  onSelect,
+  onDeselect,
+}: MediaCandidateCardProps) {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedCredit, setCopiedCredit] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const isVideo = candidate.media_type === "VIDEO";
+  const [framingMode, setFramingMode] = useState<string>(currentFramingMode);
+  const [selecting, setSelecting] = useState(false);
 
+  const isVideo = candidate.media_type === "VIDEO";
   const statusConfig =
     rightsBadgeStyles[candidate.rights_status] || rightsBadgeStyles.REVIEW_REQUIRED;
   const StatusIcon = statusConfig.icon;
@@ -88,12 +102,40 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
 
   const handleCopyCredit = async () => {
     try {
-      const creditLine = candidate.attribution || `Mídia por ${candidate.author || "Autor"} via ${candidate.provider}`;
+      const creditLine =
+        candidate.attribution ||
+        `Mídia por ${candidate.author || "Autor"} via ${candidate.provider}`;
       await navigator.clipboard.writeText(creditLine);
       setCopiedCredit(true);
       setTimeout(() => setCopiedCredit(false), 2500);
     } catch {
       // Fallback
+    }
+  };
+
+  const handleToggleSelect = async () => {
+    setSelecting(true);
+    try {
+      if (isSelected && onDeselect) {
+        await onDeselect(candidate.id);
+      } else if (onSelect) {
+        await onSelect(candidate.id, framingMode);
+      }
+    } finally {
+      setSelecting(false);
+    }
+  };
+
+  const handleFramingChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newMode = e.target.value;
+    setFramingMode(newMode);
+    if (isSelected && onSelect) {
+      setSelecting(true);
+      try {
+        await onSelect(candidate.id, newMode);
+      } finally {
+        setSelecting(false);
+      }
     }
   };
 
@@ -105,7 +147,13 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
   };
 
   return (
-    <div className="group relative bg-slate-950/80 border border-white/10 hover:border-blue-500/40 rounded-2xl overflow-hidden shadow-lg transition-all flex flex-col justify-between">
+    <div
+      className={`group relative bg-slate-950/80 rounded-2xl overflow-hidden shadow-lg transition-all flex flex-col justify-between border ${
+        isSelected
+          ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-emerald-950/50"
+          : "border-white/10 hover:border-blue-500/40"
+      }`}
+    >
       {/* Thumbnail Area */}
       <div className="relative aspect-video w-full bg-slate-900 overflow-hidden">
         {candidate.preview_url && !imgError ? (
@@ -113,12 +161,18 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
             src={candidate.preview_url}
             alt={candidate.title || "Mídia"}
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${
+              framingMode === "FIT" ? "object-contain bg-black/80" : "object-cover"
+            }`}
             loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-900 gap-1.5 p-4 text-center">
-            {isVideo ? <Film className="h-8 w-8 text-slate-500" /> : <ImageIcon className="h-8 w-8 text-slate-500" />}
+            {isVideo ? (
+              <Film className="h-8 w-8 text-slate-500" />
+            ) : (
+              <ImageIcon className="h-8 w-8 text-slate-500" />
+            )}
             <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
               <AlertTriangle className="h-3 w-3 text-amber-500/70" /> Prévia indisponível
             </span>
@@ -129,10 +183,16 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5 pointer-events-none">
           {/* Media Type & Duration */}
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur text-[10px] font-mono text-white border border-white/10">
-            {isVideo ? <Film className="h-3 w-3 text-blue-400" /> : <ImageIcon className="h-3 w-3 text-indigo-400" />}
+            {isVideo ? (
+              <Film className="h-3 w-3 text-blue-400" />
+            ) : (
+              <ImageIcon className="h-3 w-3 text-indigo-400" />
+            )}
             <span>{isVideo ? "Vídeo" : "Foto"}</span>
             {isVideo && candidate.duration && (
-              <span className="text-slate-400 font-semibold">• {formatDuration(candidate.duration)}</span>
+              <span className="text-slate-400 font-semibold">
+                • {formatDuration(candidate.duration)}
+              </span>
             )}
           </div>
 
@@ -146,8 +206,16 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
           </div>
         </div>
 
+        {/* Selected Banner */}
+        {isSelected && (
+          <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-semibold shadow-md">
+            <Pin className="h-3 w-3" />
+            <span>Mídia Fixada na Cena</span>
+          </div>
+        )}
+
         {/* Hover Action Overlay */}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2.5">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <a
             href={candidate.url}
             target="_blank"
@@ -159,6 +227,7 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
           </a>
 
           <button
+            type="button"
             onClick={handleCopyLink}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
             title="Copiar URL"
@@ -168,11 +237,16 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
 
           {candidate.rights_status === "ATTRIBUTION_REQUIRED" && (
             <button
+              type="button"
               onClick={handleCopyCredit}
               className="px-2.5 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 text-[11px] font-medium flex items-center gap-1 transition-all backdrop-blur"
               title="Copiar texto de atribuição obrigatória"
             >
-              {copiedCredit ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <FileText className="h-3.5 w-3.5" />}
+              {copiedCredit ? (
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+              ) : (
+                <FileText className="h-3.5 w-3.5" />
+              )}
               <span>{copiedCredit ? "Copiado!" : "Copiar Crédito"}</span>
             </button>
           )}
@@ -180,9 +254,12 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
       </div>
 
       {/* Info Content Area */}
-      <div className="p-3.5 space-y-2 text-xs">
+      <div className="p-3.5 space-y-2.5 text-xs">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold text-slate-200 line-clamp-1 flex-1" title={candidate.title || ""}>
+          <p
+            className="font-semibold text-slate-200 line-clamp-1 flex-1"
+            title={candidate.title || ""}
+          >
             {candidate.title || `Mídia ${candidate.external_id}`}
           </p>
           {candidate.width && candidate.height && (
@@ -201,14 +278,48 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
 
         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-white/5">
           <span className="truncate">Por {candidate.author || "Autor Desconhecido"}</span>
-          <span className={`text-[10px] uppercase font-mono font-semibold shrink-0 px-1.5 py-0.5 rounded ${
-            candidate.provider === "wikimedia"
-              ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-          }`}>
+          <span
+            className={`text-[10px] uppercase font-mono font-semibold shrink-0 px-1.5 py-0.5 rounded ${
+              candidate.provider === "wikimedia"
+                ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+            }`}
+          >
             {candidate.provider === "wikimedia" ? "Wikimedia" : "Pexels"}
           </span>
         </div>
+
+        {/* Selection & Framing Controls */}
+        {(onSelect || onDeselect) && (
+          <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Maximize2 className="h-3 w-3 text-slate-400" />
+              <select
+                value={framingMode}
+                onChange={handleFramingChange}
+                className="bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-blue-500"
+              >
+                <option value="FILL">Preencher (FILL 16:9)</option>
+                <option value="FIT">Ajustar (FIT)</option>
+                <option value="PAN_AND_ZOOM">Ken Burns (PAN & ZOOM)</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleSelect}
+              disabled={selecting}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                isSelected
+                  ? "bg-emerald-600/20 hover:bg-red-600/20 text-emerald-400 hover:text-red-400 border border-emerald-500/30 hover:border-red-500/30"
+                  : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20"
+              }`}
+            >
+              <Pin className="h-3 w-3" />
+              <span>{isSelected ? "Fixado" : "Fixar na Cena"}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

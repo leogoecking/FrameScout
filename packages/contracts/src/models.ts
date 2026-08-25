@@ -1,16 +1,13 @@
-import { RightsStatus, MediaType, QueryType } from "./enums";
+export type RightsStatus = 
+  | "SAFE_REUSE" 
+  | "ATTRIBUTION_REQUIRED" 
+  | "REVIEW_REQUIRED" 
+  | "REFERENCE_ONLY" 
+  | "BLOCKED";
 
-export interface ProjectCreate {
-  name: string;
-  language?: string;
-  script_raw?: string | null;
-}
+export type MediaType = "IMAGE" | "VIDEO";
 
-export interface ProjectUpdate {
-  name?: string | null;
-  language?: string | null;
-  script_raw?: string | null;
-}
+export type QueryType = "EVENT" | "OFFICIAL" | "BROLL" | "CONCEPT" | "COMPANY" | "PERSON" | "LOCATION";
 
 export interface Project {
   id: string;
@@ -22,16 +19,16 @@ export interface Project {
   scenes_count?: number;
 }
 
-export interface SearchQueryCreate {
-  query: string;
-  query_type?: QueryType;
-  priority?: number;
+export interface ProjectCreate {
+  name: string;
+  language?: string;
+  script_raw?: string | null;
 }
 
-export interface SearchQueryUpdate {
-  query?: string | null;
-  query_type?: QueryType | null;
-  priority?: number | null;
+export interface ProjectUpdate {
+  name?: string;
+  language?: string;
+  script_raw?: string | null;
 }
 
 export interface SearchQuery {
@@ -41,56 +38,18 @@ export interface SearchQuery {
   query_type: QueryType;
   priority: number;
   created_at: string;
-  media_candidates?: MediaCandidate[];
 }
 
-export interface SceneCreate {
-  position?: number | null;
-  title?: string | null;
-  narration: string;
-  visual_intent?: string | null;
-  start_estimate?: number | null;
-  end_estimate?: number | null;
+export interface SearchQueryCreate {
+  query: string;
+  query_type?: QueryType;
+  priority?: number;
 }
 
-export interface SceneUpdate {
-  position?: number | null;
-  title?: string | null;
-  narration?: string | null;
-  visual_intent?: string | null;
-  start_estimate?: number | null;
-  end_estimate?: number | null;
-}
-
-export interface Scene {
-  id: string;
-  project_id: string;
-  position: number;
-  title?: string | null;
-  narration: string;
-  visual_intent?: string | null;
-  start_estimate?: number | null;
-  end_estimate?: number | null;
-  created_at: string;
-  updated_at: string;
-  queries?: SearchQuery[];
-}
-
-export interface SceneReorderRequest {
-  scene_ids: string[];
-}
-
-export interface SceneSplitRequest {
-  first_part_narration: string;
-  second_part_narration: string;
-  first_part_title?: string | null;
-  second_part_title?: string | null;
-  first_part_visual_intent?: string | null;
-  second_part_visual_intent?: string | null;
-}
-
-export interface SceneMergeRequest {
-  target_scene_id: string;
+export interface SearchQueryUpdate {
+  query?: string;
+  query_type?: QueryType;
+  priority?: number;
 }
 
 export interface MediaCandidate {
@@ -110,15 +69,104 @@ export interface MediaCandidate {
   attribution?: string | null;
   rights_status: RightsStatus;
   fidelity_score?: number | null;
-  metadata_json?: Record<string, unknown>;
+  metadata_json?: Record<string, any>;
   created_at: string;
 }
 
-export interface HealthStatus {
-  status: "ok" | "degraded" | "error";
+export interface SelectedAsset {
+  id: string;
+  scene_id: string;
+  media_candidate_id: string;
+  order_index: number;
+  framing_mode: string;
+  notes?: string | null;
+  created_at: string;
+  media_candidate?: MediaCandidate | null;
+}
+
+export interface SelectedAssetCreate {
+  media_candidate_id: string;
+  order_index?: number;
+  framing_mode?: string;
+  notes?: string | null;
+}
+
+export interface SelectedAssetUpdate {
+  order_index?: number;
+  framing_mode?: string;
+  notes?: string | null;
+}
+
+export interface Scene {
+  id: string;
+  project_id: string;
+  position: number;
+  title?: string | null;
+  narration: string;
+  visual_intent?: string | null;
+  start_estimate?: number | null;
+  end_estimate?: number | null;
+  created_at: string;
+  updated_at: string;
+  queries?: SearchQuery[];
+  selected_assets?: SelectedAsset[];
+}
+
+export interface SceneCreate {
+  position?: number;
+  title?: string | null;
+  narration: string;
+  visual_intent?: string | null;
+  start_estimate?: number | null;
+  end_estimate?: number | null;
+}
+
+export interface SceneUpdate {
+  position?: number;
+  title?: string | null;
+  narration?: string;
+  visual_intent?: string | null;
+  start_estimate?: number | null;
+  end_estimate?: number | null;
+}
+
+export interface SceneSplitRequest {
+  first_part_narration: string;
+  second_part_narration: string;
+  first_part_title?: string;
+  second_part_title?: string;
+  first_part_visual_intent?: string;
+  second_part_visual_intent?: string;
+}
+
+export interface SceneVisualPlanItem {
+  scene_position: number;
+  scene_title: string;
+  narration: string;
+  visual_intent?: string | null;
+  start_estimate: number;
+  end_estimate: number;
+  duration: number;
+  selected_asset?: SelectedAsset | null;
+}
+
+export interface VisualPlanExport {
+  project_id: string;
+  project_name: string;
+  language: string;
+  total_scenes: number;
+  covered_scenes_count: number;
+  total_duration_seconds: number;
+  scenes: SceneVisualPlanItem[];
+  consolidated_attributions: string[];
+  markdown_document: string;
+}
+
+export interface HealthData {
+  status: string;
   service: string;
   environment: string;
   version: string;
-  database: "connected" | "disconnected";
+  database: string;
   timestamp: string;
 }
