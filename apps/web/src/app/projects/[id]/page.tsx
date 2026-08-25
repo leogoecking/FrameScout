@@ -63,10 +63,20 @@ export default function ProjectWorkspacePage() {
     load();
   }, [projectId]);
 
+  const refreshMetrics = async () => {
+    try {
+      const metricsData = await getProjectFidelityMetrics(projectId);
+      setFidelityMetrics(metricsData);
+    } catch {
+      // Keep existing state
+    }
+  };
+
   const handleSaveScript = async (newScript: string) => {
     if (!project) return;
     const updated = await updateProject(project.id, { script_raw: newScript });
     setProject(updated);
+    refreshMetrics();
   };
 
   const handleOpenExportModal = async () => {
@@ -254,7 +264,11 @@ export default function ProjectWorkspacePage() {
             projectId={project.id}
             hasScript={Boolean(project.script_raw && project.script_raw.trim().length > 0)}
             initialScenes={scenes}
-            onScenesUpdated={(updatedScenes) => setScenes(updatedScenes)}
+            onScenesUpdated={(updatedScenes) => {
+              setScenes(updatedScenes);
+              refreshMetrics();
+            }}
+            onAssetSelected={refreshMetrics}
           />
         </div>
       )}

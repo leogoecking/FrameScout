@@ -31,6 +31,7 @@ interface SceneListProps {
   hasScript: boolean;
   initialScenes: Scene[];
   onScenesUpdated?: (scenes: Scene[]) => void;
+  onAssetSelected?: () => void;
 }
 
 export function SceneList({
@@ -38,6 +39,7 @@ export function SceneList({
   hasScript,
   initialScenes,
   onScenesUpdated,
+  onAssetSelected,
 }: SceneListProps) {
   const [scenes, setScenes] = useState<Scene[]>(initialScenes);
   const [isGeneratingScenes, setIsGeneratingScenes] = useState(false);
@@ -338,6 +340,7 @@ export function SceneList({
               onOpenSplit={(sc) => setSplitTargetScene(sc)}
               onMergeWithNext={handleMergeWithNext}
               onQueriesUpdated={handleQueriesUpdated}
+              onAssetSelected={onAssetSelected}
             />
           ))}
         </div>

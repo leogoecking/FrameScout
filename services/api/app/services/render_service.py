@@ -190,16 +190,23 @@ class RenderService:
                             if candidate.attribution:
                                 attributions_set.add(candidate.attribution)
 
+                            meta_dict = candidate.metadata_json or {}
                             raw_url = (
                                 candidate.preview_url
-                                or candidate.metadata_json.get("file_url")
+                                or meta_dict.get("file_url")
                                 or candidate.url
                             )
                             download_url = RenderService._sanitize_media_url(raw_url)
 
+                            is_video_type = (
+                                candidate.media_type.value == "VIDEO"
+                                if hasattr(candidate.media_type, "value")
+                                else str(candidate.media_type) == "VIDEO"
+                            )
+
                             ext = ".jpg"
                             if (
-                                candidate.media_type.value == "VIDEO"
+                                is_video_type
                                 or "video" in download_url.lower()
                             ):
                                 ext = ".mp4"

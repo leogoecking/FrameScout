@@ -27,6 +27,7 @@ interface SceneCardProps {
   onOpenSplit: (scene: Scene) => void;
   onMergeWithNext: (scene: Scene) => Promise<void>;
   onQueriesUpdated?: (sceneId: string, queries: SearchQuery[]) => void;
+  onAssetSelected?: () => void;
 }
 
 export function SceneCard({
@@ -40,6 +41,7 @@ export function SceneCard({
   onOpenSplit,
   onMergeWithNext,
   onQueriesUpdated,
+  onAssetSelected,
 }: SceneCardProps) {
   const [title, setTitle] = useState(scene.title || `Cena ${scene.position}`);
   const [narration, setNarration] = useState(scene.narration);
@@ -230,6 +232,7 @@ export function SceneCard({
       <MediaGallery
         sceneId={scene.id}
         hasQueries={(scene.queries?.length || 0) > 0}
+        onAssetSelected={onAssetSelected}
       />
     </div>
   );

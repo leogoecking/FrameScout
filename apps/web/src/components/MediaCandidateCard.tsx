@@ -285,11 +285,11 @@ export function MediaCandidateCard({
             <span className="font-mono text-emerald-400">{fidelity}/100</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5 text-slate-400 font-mono text-[10px]">
-            <div>• Semântica: <span className="text-white">{fidelityBreakdown?.semantic ?? (fidelity * 0.4).toFixed(1)}/40</span></div>
-            <div>• Entidades: <span className="text-white">{fidelityBreakdown?.entities ?? (fidelity * 0.25).toFixed(1)}/25</span></div>
-            <div>• Autoridade: <span className="text-white">{fidelityBreakdown?.authority ?? "14.0"}/15</span></div>
-            <div>• Contexto: <span className="text-white">{fidelityBreakdown?.temporal ?? "10.0"}/10</span></div>
-            <div>• Resolução: <span className="text-white">{fidelityBreakdown?.quality ?? "10.0"}/10</span></div>
+            <div>• Semântica: <span className="text-white">{Number(fidelityBreakdown?.semantic ?? (fidelity * 0.4)).toFixed(1)}/40</span></div>
+            <div>• Entidades: <span className="text-white">{Number(fidelityBreakdown?.entities ?? (fidelity * 0.25)).toFixed(1)}/25</span></div>
+            <div>• Autoridade: <span className="text-white">{Number(fidelityBreakdown?.authority ?? 14.0).toFixed(1)}/15</span></div>
+            <div>• Contexto: <span className="text-white">{Number(fidelityBreakdown?.temporal ?? 10.0).toFixed(1)}/10</span></div>
+            <div>• Resolução: <span className="text-white">{Number(fidelityBreakdown?.quality ?? 10.0).toFixed(1)}/10</span></div>
           </div>
         </div>
       )}
