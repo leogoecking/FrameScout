@@ -36,7 +36,7 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const [candidates, setCandidates] = useState<MediaCandidate[]>(initialCandidates);
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
-  const [filter, setFilter] = useState<"ALL" | "PEXELS" | "WIKIMEDIA" | "IMAGE" | "VIDEO">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "PEXELS" | "WIKIMEDIA" | "OPENVERSE" | "NASA" | "IMAGE" | "VIDEO">("ALL");
   const [fidelityFilter, setFidelityFilter] = useState<"ALL" | "HIGH" | "BROLL">("ALL");
   const [selectedProvider, setSelectedProvider] = useState<string>("all");
   const [loading, setLoading] = useState(false);
@@ -127,6 +127,8 @@ export function MediaGallery({
     // Provider & Type filter
     if (filter === "PEXELS" && c.provider.toLowerCase() !== "pexels") return false;
     if (filter === "WIKIMEDIA" && c.provider.toLowerCase() !== "wikimedia") return false;
+    if (filter === "OPENVERSE" && c.provider.toLowerCase() !== "openverse") return false;
+    if (filter === "NASA" && c.provider.toLowerCase() !== "nasa") return false;
     if (filter === "IMAGE" && c.media_type !== "IMAGE") return false;
     if (filter === "VIDEO" && c.media_type !== "VIDEO") return false;
 
@@ -142,6 +144,8 @@ export function MediaGallery({
 
   const pexelsCount = candidates.filter((c) => c.provider.toLowerCase() === "pexels").length;
   const wikiCount = candidates.filter((c) => c.provider.toLowerCase() === "wikimedia").length;
+  const openverseCount = candidates.filter((c) => c.provider.toLowerCase() === "openverse").length;
+  const nasaCount = candidates.filter((c) => c.provider.toLowerCase() === "nasa").length;
   const photoCount = candidates.filter((c) => c.media_type === "IMAGE").length;
   const videoCount = candidates.filter((c) => c.media_type === "VIDEO").length;
 
@@ -168,17 +172,30 @@ export function MediaGallery({
               >
                 Todos ({candidates.length})
               </button>
-              {pexelsCount > 0 && (
+              {nasaCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => setFilter("PEXELS")}
+                  onClick={() => setFilter("NASA")}
                   className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
-                    filter === "PEXELS"
-                      ? "bg-emerald-600 text-white font-medium shadow-xs"
+                    filter === "NASA"
+                      ? "bg-sky-600 text-white font-medium shadow-xs"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  Pexels ({pexelsCount})
+                  NASA ({nasaCount})
+                </button>
+              )}
+              {openverseCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("OPENVERSE")}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    filter === "OPENVERSE"
+                      ? "bg-purple-600 text-white font-medium shadow-xs"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Openverse ({openverseCount})
                 </button>
               )}
               {wikiCount > 0 && (
@@ -192,6 +209,19 @@ export function MediaGallery({
                   }`}
                 >
                   Wikimedia ({wikiCount})
+                </button>
+              )}
+              {pexelsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("PEXELS")}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    filter === "PEXELS"
+                      ? "bg-emerald-600 text-white font-medium shadow-xs"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Pexels ({pexelsCount})
                 </button>
               )}
               <button
@@ -278,9 +308,11 @@ export function MediaGallery({
             onChange={(e) => setSelectedProvider(e.target.value)}
             className="bg-slate-950 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
           >
-            <option value="all">Todos os Provedores (Pexels + Wikimedia)</option>
-            <option value="pexels">Apenas Pexels (B-Roll)</option>
+            <option value="all">Todas as Fontes (Openverse, NASA, Wiki, Pexels)</option>
+            <option value="openverse">Apenas Openverse (+700M Imagens Abertas)</option>
+            <option value="nasa">Apenas NASA (Missões, Espaço & Vídeos)</option>
             <option value="wikimedia">Apenas Wikimedia (Histórico / Oficial)</option>
+            <option value="pexels">Apenas Pexels (Estoque B-Roll)</option>
           </select>
 
           <button

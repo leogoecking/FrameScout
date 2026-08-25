@@ -276,13 +276,17 @@ class FidelityEngine:
     def compute_source_authority(provider: str, metadata_json: Optional[Dict[str, Any]]) -> float:
         """Pontua a autoridade documental da fonte de procedência."""
         prov = provider.lower()
+        if "nasa" in prov:
+            return 0.98
         if "wikimedia" in prov:
             return 0.95
+        if "openverse" in prov:
+            return 0.90
         if "pexels" in prov:
             return 0.80
         if "official" in prov or (metadata_json and metadata_json.get("is_official")):
             return 1.00
-        return 0.70
+        return 0.75
 
     @staticmethod
     def compute_temporal_context(scene_text: str, media_text: str) -> float:

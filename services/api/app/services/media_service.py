@@ -10,14 +10,18 @@ from app.domain.schemas import MediaCandidateBase, SearchQueryBase
 from app.engine.fidelity_engine import FidelityEngine
 from app.models.entities import MediaCandidate, Project, Scene, SearchQuery, SelectedAsset
 from app.providers.base import MediaProvider
+from app.providers.nasa import NASAProvider
+from app.providers.openverse import OpenverseProvider
 from app.providers.pexels import PexelsProvider
 from app.providers.wikimedia import WikimediaProvider
 
 
 def get_providers_map() -> Dict[str, MediaProvider]:
     return {
-        "pexels": PexelsProvider(),
         "wikimedia": WikimediaProvider(),
+        "openverse": OpenverseProvider(),
+        "nasa": NASAProvider(),
+        "pexels": PexelsProvider(),
     }
 
 
@@ -99,10 +103,43 @@ class MediaService:
             else search_query.query_type
         )
 
+        query_str_lower = search_query.query.lower()
+        is_space_or_science = any(
+            w in query_str_lower
+            for w in [
+                "space",
+                "espaço",
+                "espaco",
+                "nasa",
+                "astronaut",
+                "astronauta",
+                "planet",
+                "planeta",
+                "moon",
+                "lua",
+                "mars",
+                "marte",
+                "galaxy",
+                "galáxia",
+                "telescop",
+                "rocket",
+                "foguete",
+                "science",
+                "ciência",
+            ]
+        )
+
         if provider_name and provider_name.lower() in providers_map:
             selected_providers.append(providers_map[provider_name.lower()])
         else:
-            if q_type in [
+            if is_space_or_science:
+                selected_providers = [
+                    providers_map["nasa"],
+                    providers_map["wikimedia"],
+                    providers_map["openverse"],
+                    providers_map["pexels"],
+                ]
+            elif q_type in [
                 QueryType.EVENT,
                 QueryType.OFFICIAL,
                 QueryType.COMPANY,
@@ -111,16 +148,18 @@ class MediaService:
             ]:
                 selected_providers = [
                     providers_map["wikimedia"],
+                    providers_map["openverse"],
                     providers_map["pexels"],
                 ]
             else:
                 selected_providers = [
+                    providers_map["openverse"],
                     providers_map["pexels"],
                     providers_map["wikimedia"],
                 ]
 
         raw_candidates: List[MediaCandidateBase] = []
-        limit_per_prov = max(1, limit // len(selected_providers))
+        limit_per_prov = max(2, (limit + len(selected_providers) - 1) // len(selected_providers))
 
         for prov in selected_providers:
             results = await prov.search(
@@ -139,7 +178,7 @@ class MediaService:
             )
             await db.execute(del_stmt)
 
-        created_entities: List[MediaCandidate] = []
+        scored_candidates: List[tuple[float, Dict[str, Any], MediaCandidateBase]] = []
         seen_ext: Set[str] = set()
 
         for rc in raw_candidates:
@@ -152,7 +191,7 @@ class MediaService:
                 scene_narration=scene_narration,
                 scene_visual_intent=scene_intent,
                 scene_title=scene_title,
-                media_title=rc.title,
+                media_title=rc.title or "",
                 media_provider=rc.provider,
                 media_width=rc.width,
                 media_height=rc.height,
@@ -164,7 +203,14 @@ class MediaService:
 
             meta: Dict[str, Any] = dict(rc.metadata_json or {})
             meta["fidelity_breakdown"] = breakdown
+            scored_candidates.append((score / 100.0, meta, rc))
 
+        # Ordenar por score decrescente e persistir apenas os melhores até o limit
+        scored_candidates.sort(key=lambda x: x[0], reverse=True)
+        top_candidates = scored_candidates[:limit]
+
+        created_entities: List[MediaCandidate] = []
+        for s_val, s_meta, rc in top_candidates:
             mc = MediaCandidate(
                 search_query_id=search_query_id,
                 provider=rc.provider,
@@ -180,8 +226,8 @@ class MediaService:
                 license=rc.license,
                 attribution=rc.attribution,
                 rights_status=rc.rights_status,
-                fidelity_score=score / 100.0,
-                metadata_json=meta,
+                fidelity_score=s_val,
+                metadata_json=s_meta,
             )
             db.add(mc)
             created_entities.append(mc)
@@ -190,8 +236,6 @@ class MediaService:
         for c in created_entities:
             await db.refresh(c)
 
-        # Ordenar por score decrescente
-        created_entities.sort(key=lambda x: x.fidelity_score or 0.0, reverse=True)
         return created_entities
 
     @staticmethod

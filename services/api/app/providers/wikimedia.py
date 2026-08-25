@@ -518,9 +518,7 @@ class WikimediaProvider(MediaProvider):
                 matched_items.append(item)
 
         # Se não houver match direto, utiliza os primeiros itens do catálogo
-        selected_items: List[Dict[str, Any]] = (
-            matched_items if matched_items else thematic_catalog
-        )
+        selected_items: List[Dict[str, Any]] = matched_items if matched_items else thematic_catalog
 
         candidates: List[MediaCandidateBase] = []
         count = min(limit, len(selected_items))
