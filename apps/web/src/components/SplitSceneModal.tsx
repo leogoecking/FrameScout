@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Scissors, Loader2 } from "lucide-react";
 import { Scene, SceneSplitRequest } from "@/types";
 
@@ -19,17 +19,17 @@ export function SplitSceneModal({ scene, isOpen, onClose, onSplit }: SplitSceneM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize split text roughly in half when opened
-  useState(() => {
-    if (scene) {
-      const words = scene.narration.split(" ");
-      const mid = Math.ceil(words.length / 2);
+  useEffect(() => {
+    if (scene && isOpen) {
+      const words = scene.narration.trim().split(/\s+/);
+      const mid = Math.max(1, Math.ceil(words.length / 2));
       setPart1(words.slice(0, mid).join(" "));
       setPart2(words.slice(mid).join(" "));
       setTitle1(`${scene.title || `Cena ${scene.position}`} (Parte 1)`);
       setTitle2(`${scene.title || `Cena ${scene.position}`} (Parte 2)`);
+      setError(null);
     }
-  });
+  }, [scene, isOpen]);
 
   if (!isOpen || !scene) return null;
 
