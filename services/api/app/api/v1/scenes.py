@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db_session
 from app.domain.schemas import (
     SceneCreate,
+    SceneEntitiesResponse,
     SceneMergeRequest,
     SceneRead,
     SceneReorderRequest,
@@ -14,6 +15,7 @@ from app.domain.schemas import (
     SceneUpdate,
     SearchQueryRead,
 )
+from app.engine.entity_engine import EntityEngine
 from app.models.entities import Scene
 from app.services.scene_service import SceneService
 
@@ -210,3 +212,31 @@ async def merge_scenes(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
+
+
+@router.post(
+    "/scenes/{scene_id}/entities/extract",
+    response_model=SceneEntitiesResponse,
+    summary="Extrair e categorizar entidades nomeadas (NER) da narração da cena",
+)
+async def extract_scene_entities(
+    scene_id: UUID,
+    db: DbSession,
+) -> SceneEntitiesResponse:
+    scene = await SceneService.get(db, scene_id)
+    if not scene:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cena não encontrada",
+        )
+
+    context_text = f"{scene.title or ''} {scene.narration} {scene.visual_intent or ''}".strip()
+    entities = EntityEngine.extract_entities(context_text)
+    suggested_queries = EntityEngine.generate_queries_from_entities(entities, scene.title or "")
+
+    return SceneEntitiesResponse(
+        scene_id=scene.id,
+        scene_position=scene.position,
+        entities=entities,
+        suggested_queries=suggested_queries,
+    )

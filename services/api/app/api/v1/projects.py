@@ -1,11 +1,18 @@
-from typing import Annotated, List
+from typing import Annotated, Dict, List, Set
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
-from app.domain.schemas import ProjectCreate, ProjectRead, ProjectUpdate
+from app.domain.schemas import (
+    ProjectCreate,
+    ProjectEntitiesResponse,
+    ProjectRead,
+    ProjectUpdate,
+    SceneEntitiesResponse,
+)
+from app.engine.entity_engine import EntityEngine
 from app.models.entities import Project
 from app.services.project_service import ProjectService
 
@@ -112,3 +119,59 @@ async def delete_project(
             detail="Projeto não encontrado",
         )
     await ProjectService.delete(db, project)
+
+
+@router.post(
+    "/{project_id}/entities/extract",
+    response_model=ProjectEntitiesResponse,
+    summary="Extrair panorama consolidado de entidades de todo o projeto",
+)
+async def extract_project_entities(
+    project_id: UUID,
+    db: DbSession,
+) -> ProjectEntitiesResponse:
+    project = await ProjectService.get(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projeto não encontrado",
+        )
+
+    scenes_entities: List[SceneEntitiesResponse] = []
+    entities_by_cat: Dict[str, Set[str]] = {
+        "ORGANIZATION": set(),
+        "PRODUCT": set(),
+        "PERSON": set(),
+        "TECHNOLOGY": set(),
+        "LOCATION": set(),
+        "DATE_TIME": set(),
+        "EVENT": set(),
+    }
+    total_count = 0
+
+    for sc in project.scenes or []:
+        c_text = f"{sc.title or ''} {sc.narration} {sc.visual_intent or ''}".strip()
+        sc_ents = EntityEngine.extract_entities(c_text)
+        sc_queries = EntityEngine.generate_queries_from_entities(sc_ents, sc.title or "")
+
+        for ent in sc_ents:
+            cat_name = ent.category.value if hasattr(ent.category, "value") else str(ent.category)
+            if cat_name in entities_by_cat:
+                entities_by_cat[cat_name].add(ent.text)
+            total_count += 1
+
+        scenes_entities.append(
+            SceneEntitiesResponse(
+                scene_id=sc.id,
+                scene_position=sc.position,
+                entities=sc_ents,
+                suggested_queries=sc_queries,
+            )
+        )
+
+    return ProjectEntitiesResponse(
+        project_id=project.id,
+        total_entities_count=total_count,
+        entities_by_category={k: sorted(list(v)) for k, v in entities_by_cat.items()},
+        scenes_entities=scenes_entities,
+    )

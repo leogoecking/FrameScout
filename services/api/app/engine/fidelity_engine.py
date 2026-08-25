@@ -236,6 +236,21 @@ class FidelityEngine:
     def extract_entities(text: str) -> Set[str]:
         """Extrai entidades específicas, termos em caixa alta, siglas e termos-chave."""
         entities: Set[str] = set()
+
+        # Usar EntityEngine para entidades categorizadas
+        try:
+            from app.engine.entity_engine import EntityEngine
+
+            extracted = EntityEngine.extract_entities(text)
+            for ent in extracted:
+                entities.add(ent.text.lower())
+                # Adicionar também tokens individuais de entidades compostas
+                for t in ent.text.lower().split():
+                    if len(t) > 2 and t not in STOPWORDS:
+                        entities.add(t)
+        except Exception:
+            pass
+
         acronyms = re.findall(r"\b[A-Z0-9]{2,}\b", text)
         entities.update(a.lower() for a in acronyms if a.lower() not in STOPWORDS)
 

@@ -14,7 +14,8 @@ import {
   SelectedAsset,
   SelectedAssetCreate,
   SelectedAssetUpdate,
-  VisualPlanExport, RenderJob, RenderJobCreate, VoiceOption, ProjectFidelityMetrics
+  VisualPlanExport, RenderJob, RenderJobCreate, VoiceOption, ProjectFidelityMetrics,
+  SceneEntitiesResponse, ProjectEntitiesResponse
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -513,3 +514,28 @@ export async function getProjectFidelityMetrics(projectId: string): Promise<Proj
   }
   return await res.json();
 }
+
+// --- Entity Extraction (Sprint 13) ---
+
+export async function extractSceneEntities(sceneId: string): Promise<SceneEntitiesResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/entities/extract`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to extract scene entities: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function extractProjectEntities(projectId: string): Promise<ProjectEntitiesResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/entities/extract`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to extract project entities: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+

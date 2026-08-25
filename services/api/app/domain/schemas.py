@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.domain.enums import MediaType, QueryType, RenderStatus, RightsStatus
+from app.domain.enums import EntityCategory, MediaType, QueryType, RenderStatus, RightsStatus
 
 # --- Project Schemas ---
 
@@ -258,6 +258,32 @@ class RenderJobRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Entity Extraction Schemas (Sprint 13) ---
+
+
+class ExtractedEntity(BaseModel):
+    text: str = Field(..., description="Texto da entidade extraída")
+    category: EntityCategory = Field(..., description="Categoria classificada da entidade")
+    confidence: float = Field(
+        default=1.0, ge=0.0, le=1.0, description="Confiança heurística da detecção"
+    )
+    context: Optional[str] = Field(None, description="Trecho de contexto onde foi detectada")
+
+
+class SceneEntitiesResponse(BaseModel):
+    scene_id: UUID
+    scene_position: int
+    entities: List[ExtractedEntity]
+    suggested_queries: List[SearchQueryBase]
+
+
+class ProjectEntitiesResponse(BaseModel):
+    project_id: UUID
+    total_entities_count: int
+    entities_by_category: Dict[str, List[str]]
+    scenes_entities: List[SceneEntitiesResponse]
 
 
 # --- Health Schemas ---

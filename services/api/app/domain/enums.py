@@ -42,3 +42,17 @@ class RenderStatus(str, enum.Enum):
 class AspectRatio(str, enum.Enum):
     LANDSCAPE_16_9 = "16:9"
     PORTRAIT_9_16 = "9:16"
+
+
+class EntityCategory(str, enum.Enum):
+    """
+    Categorias de entidades nomeadas extraídas pelo EntityEngine (NER).
+    """
+
+    ORGANIZATION = "ORGANIZATION"
+    PRODUCT = "PRODUCT"
+    PERSON = "PERSON"
+    TECHNOLOGY = "TECHNOLOGY"
+    LOCATION = "LOCATION"
+    DATE_TIME = "DATE_TIME"
+    EVENT = "EVENT"

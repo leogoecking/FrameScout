@@ -231,3 +231,34 @@ export interface ProjectFidelityMetrics {
   scenes_covered: number;
   total_scenes: number;
 }
+
+export type EntityCategory =
+  | 'ORGANIZATION'
+  | 'PRODUCT'
+  | 'PERSON'
+  | 'TECHNOLOGY'
+  | 'LOCATION'
+  | 'DATE_TIME'
+  | 'EVENT';
+
+export interface ExtractedEntity {
+  text: string;
+  category: EntityCategory;
+  confidence: number;
+  context?: string | null;
+}
+
+export interface SceneEntitiesResponse {
+  scene_id: string;
+  scene_position: number;
+  entities: ExtractedEntity[];
+  suggested_queries: SearchQueryCreate[];
+}
+
+export interface ProjectEntitiesResponse {
+  project_id: string;
+  total_entities_count: number;
+  entities_by_category: Record<string, string[]>;
+  scenes_entities: SceneEntitiesResponse[];
+}
+

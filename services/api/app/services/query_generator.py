@@ -3,6 +3,7 @@ from typing import List, Optional, Set
 
 from app.domain.enums import QueryType
 from app.domain.schemas import SearchQueryCreate
+from app.engine.entity_engine import EntityEngine
 
 # Stop words in Portuguese and English to filter out noisy terms in query construction
 STOP_WORDS = {
@@ -315,6 +316,27 @@ class QueryGenerator:
                         priority=3,
                     )
                 )
+
+        # -------------------------------------------------------------
+        # 5. ENTITY-DERIVED QUERIES (Sprint 13 - Enriquecimento por NER)
+        # -------------------------------------------------------------
+        try:
+            extracted_entities = EntityEngine.extract_entities(full_text)
+            entity_queries = EntityEngine.generate_queries_from_entities(
+                extracted_entities, title or ""
+            )
+            for eq in entity_queries:
+                if eq.query.lower() not in seen_queries:
+                    seen_queries.add(eq.query.lower())
+                    queries.append(
+                        SearchQueryCreate(
+                            query=eq.query,
+                            query_type=eq.query_type,
+                            priority=eq.priority,
+                        )
+                    )
+        except Exception:
+            pass
 
         # Garantir pelo menos uma query de B-roll se o conjunto estiver vazio ou pequeno
         if not queries and title:
