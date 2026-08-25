@@ -6,7 +6,10 @@ import {
   Scene, 
   SceneCreate, 
   SceneUpdate, 
-  SceneSplitRequest 
+  SceneSplitRequest,
+  SearchQuery,
+  SearchQueryCreate,
+  SearchQueryUpdate
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -202,4 +205,83 @@ export async function mergeScenes(sceneId: string, targetSceneId: string): Promi
     throw new Error(msg);
   }
   return await res.json();
+}
+
+// --- Search Queries ---
+
+export async function listQueries(sceneId: string): Promise<SearchQuery[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/queries`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to list queries: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function generateSceneQueries(sceneId: string): Promise<SearchQuery[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/queries/generate`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to generate scene queries: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function generateProjectQueries(
+  projectId: string
+): Promise<{ scenes_count: number; total_queries_created: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/queries/generate`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to generate project queries: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function createQuery(
+  sceneId: string,
+  data: SearchQueryCreate
+): Promise<SearchQuery> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/queries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to create query: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function updateQuery(
+  queryId: string,
+  data: SearchQueryUpdate
+): Promise<SearchQuery> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/queries/${queryId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to update query: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function deleteQuery(queryId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/queries/${queryId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok && res.status !== 204) {
+    const msg = await parseErrorMessage(res, `Failed to delete query: ${res.status}`);
+    throw new Error(msg);
+  }
 }

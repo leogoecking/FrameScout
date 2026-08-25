@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Scene, SceneCreate, SceneSplitRequest, SceneUpdate } from "@/types";
+import { Scene, SceneSplitRequest, SceneUpdate, SearchQuery } from "@/types";
 import { 
   createScene, 
   deleteScene, 
+  generateProjectQueries, 
   generateScenes, 
+  listScenes,
   mergeScenes, 
   reorderScenes, 
   splitScene, 
@@ -19,7 +21,9 @@ import {
   Clock, 
   Layers, 
   Loader2, 
-  AlertCircle 
+  AlertCircle,
+  Search,
+  CheckCircle2
 } from "lucide-react";
 
 interface SceneListProps {
@@ -36,10 +40,12 @@ export function SceneList({
   onScenesUpdated,
 }: SceneListProps) {
   const [scenes, setScenes] = useState<Scene[]>(initialScenes);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingScenes, setIsGeneratingScenes] = useState(false);
+  const [isGeneratingQueries, setIsGeneratingQueries] = useState(false);
   const [isCreatingManual, setIsCreatingManual] = useState(false);
   const [splitTargetScene, setSplitTargetScene] = useState<Scene | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const notifyUpdated = (newScenes: Scene[]) => {
     setScenes(newScenes);
@@ -48,21 +54,49 @@ export function SceneList({
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerateScenes = async () => {
     if (!hasScript) {
       setError("Por favor, adicione e salve um roteiro antes de gerar cenas.");
       return;
     }
 
-    setIsGenerating(true);
+    setIsGeneratingScenes(true);
     setError(null);
+    setSuccessMessage(null);
     try {
       const generated = await generateScenes(projectId);
       notifyUpdated(generated);
+      setSuccessMessage(`Roteiro segmentado em ${generated.length} cenas com sucesso!`);
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       setError(err?.message || "Erro ao gerar cenas.");
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingScenes(false);
+    }
+  };
+
+  const handleBatchGenerateQueries = async () => {
+    if (scenes.length === 0) {
+      setError("Crie ou gere cenas antes de produzir consultas de busca.");
+      return;
+    }
+
+    setIsGeneratingQueries(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const res = await generateProjectQueries(projectId);
+      // Reload scenes with their queries populated
+      const refreshed = await listScenes(projectId);
+      notifyUpdated(refreshed);
+      setSuccessMessage(
+        `${res.total_queries_created} consultas de busca geradas para ${res.scenes_count} cenas!`
+      );
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setError(err?.message || "Erro ao gerar queries em lote.");
+    } finally {
+      setIsGeneratingQueries(false);
     }
   };
 
@@ -166,7 +200,12 @@ export function SceneList({
     }
   };
 
-  // Total Duration
+  const handleQueriesUpdated = (sceneId: string, queries: SearchQuery[]) => {
+    const updated = scenes.map((s) => (s.id === sceneId ? { ...s, queries } : s));
+    notifyUpdated(updated);
+  };
+
+  // Total Duration and Total Queries count
   const totalSeconds = scenes.reduce((acc, s) => {
     const dur = (s.end_estimate || 0) - (s.start_estimate || 0);
     return acc + Math.max(0, dur);
@@ -174,23 +213,30 @@ export function SceneList({
   const totalMins = Math.floor(totalSeconds / 60);
   const remSecs = Math.floor(totalSeconds % 60);
 
+  const totalQueries = scenes.reduce((acc, s) => acc + (s.queries?.length || 0), 0);
+
   return (
     <div className="space-y-6">
       {/* Control Bar */}
       <div className="glass-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono font-semibold">
             <Layers className="h-3.5 w-3.5" />
             <span>{scenes.length} {scenes.length === 1 ? "Cena" : "Cenas"}</span>
           </div>
 
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-semibold">
+            <Search className="h-3.5 w-3.5" />
+            <span>{totalQueries} {totalQueries === 1 ? "Busca" : "Buscas"}</span>
+          </div>
+
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
             <Clock className="h-3.5 w-3.5 text-slate-500" />
-            <span>Duração Estimada: {totalMins}m {remSecs}s</span>
+            <span>Duração: {totalMins}m {remSecs}s</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleCreateManual}
             disabled={isCreatingManual}
@@ -200,12 +246,32 @@ export function SceneList({
             <span>Nova Cena</span>
           </button>
 
+          {scenes.length > 0 && (
+            <button
+              onClick={handleBatchGenerateQueries}
+              disabled={isGeneratingQueries}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              {isGeneratingQueries ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Gerando Queries...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-3.5 w-3.5" />
+                  <span>Gerar Queries em Lote</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !hasScript}
+            onClick={handleGenerateScenes}
+            disabled={isGeneratingScenes || !hasScript}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {isGenerating ? (
+            {isGeneratingScenes ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 <span>Segmentando Roteiro...</span>
@@ -219,6 +285,13 @@ export function SceneList({
           </button>
         </div>
       </div>
+
+      {successMessage && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
@@ -241,7 +314,7 @@ export function SceneList({
           </div>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
-              onClick={handleGenerate}
+              onClick={handleGenerateScenes}
               disabled={!hasScript}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/20 disabled:opacity-50 transition-all"
             >
@@ -264,6 +337,7 @@ export function SceneList({
               onMoveDown={(id) => handleMove(id, "down")}
               onOpenSplit={(sc) => setSplitTargetScene(sc)}
               onMergeWithNext={handleMergeWithNext}
+              onQueriesUpdated={handleQueriesUpdated}
             />
           ))}
         </div>

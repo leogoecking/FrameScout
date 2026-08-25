@@ -12,12 +12,34 @@ from app.domain.schemas import (
     SceneReorderRequest,
     SceneSplitRequest,
     SceneUpdate,
+    SearchQueryRead,
 )
+from app.models.entities import Scene
 from app.services.scene_service import SceneService
 
 router = APIRouter(tags=["Scenes"])
 
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
+
+
+def _to_scene_read(scene: Scene) -> SceneRead:
+    queries_list: List[SearchQueryRead] = []
+    if "queries" in scene.__dict__ and scene.queries is not None:
+        queries_list = [SearchQueryRead.model_validate(q) for q in scene.queries]
+
+    return SceneRead(
+        id=scene.id,
+        project_id=scene.project_id,
+        position=scene.position,
+        title=scene.title,
+        narration=scene.narration,
+        visual_intent=scene.visual_intent,
+        start_estimate=scene.start_estimate,
+        end_estimate=scene.end_estimate,
+        created_at=scene.created_at,
+        updated_at=scene.updated_at,
+        queries=queries_list,
+    )
 
 
 # --- Project-Scoped Scene Endpoints ---
@@ -34,7 +56,7 @@ async def generate_scenes(
 ) -> List[SceneRead]:
     try:
         scenes = await SceneService.generate_from_script(db, project_id)
-        return [SceneRead.model_validate(s) for s in scenes]
+        return [_to_scene_read(s) for s in scenes]
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -52,7 +74,7 @@ async def list_project_scenes(
     db: DbSession,
 ) -> List[SceneRead]:
     scenes = await SceneService.list_by_project(db, project_id)
-    return [SceneRead.model_validate(s) for s in scenes]
+    return [_to_scene_read(s) for s in scenes]
 
 
 @router.post(
@@ -67,7 +89,7 @@ async def create_scene(
     db: DbSession,
 ) -> SceneRead:
     scene = await SceneService.create(db, project_id, data)
-    return SceneRead.model_validate(scene)
+    return _to_scene_read(scene)
 
 
 @router.put(
@@ -81,7 +103,7 @@ async def reorder_scenes(
     db: DbSession,
 ) -> List[SceneRead]:
     scenes = await SceneService.reorder(db, project_id, req.scene_ids)
-    return [SceneRead.model_validate(s) for s in scenes]
+    return [_to_scene_read(s) for s in scenes]
 
 
 # --- Individual Scene Endpoints ---
@@ -101,7 +123,7 @@ async def get_scene(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Cena não encontrada",
         )
-    return SceneRead.model_validate(scene)
+    return _to_scene_read(scene)
 
 
 @router.put(
@@ -121,7 +143,7 @@ async def update_scene(
             detail="Cena não encontrada",
         )
     updated = await SceneService.update(db, scene, data)
-    return SceneRead.model_validate(updated)
+    return _to_scene_read(updated)
 
 
 @router.delete(
@@ -159,7 +181,7 @@ async def split_scene(
             detail="Cena não encontrada",
         )
     scenes = await SceneService.split(db, scene, req)
-    return [SceneRead.model_validate(s) for s in scenes]
+    return [_to_scene_read(s) for s in scenes]
 
 
 @router.post(
@@ -180,7 +202,7 @@ async def merge_scenes(
         )
     try:
         merged = await SceneService.merge(db, scene, req)
-        return SceneRead.model_validate(merged)
+        return _to_scene_read(merged)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

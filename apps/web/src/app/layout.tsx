@@ -24,7 +24,7 @@ export default function RootLayout({
               <div>
                 <span className="font-semibold text-lg tracking-tight text-white">FrameScout</span>
                 <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
-                  Sprint 1
+                  Sprint 3
                 </span>
               </div>
             </div>

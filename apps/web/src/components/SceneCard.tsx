@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Scene, SceneUpdate } from "@/types";
+import { Scene, SceneUpdate, SearchQuery } from "@/types";
+import { SceneQueriesSection } from "@/components/SceneQueriesSection";
 import { 
   Clock, 
   ChevronUp, 
@@ -24,6 +25,7 @@ interface SceneCardProps {
   onMoveDown: (sceneId: string) => Promise<void>;
   onOpenSplit: (scene: Scene) => void;
   onMergeWithNext: (scene: Scene) => Promise<void>;
+  onQueriesUpdated?: (sceneId: string, queries: SearchQuery[]) => void;
 }
 
 export function SceneCard({
@@ -36,6 +38,7 @@ export function SceneCard({
   onMoveDown,
   onOpenSplit,
   onMergeWithNext,
+  onQueriesUpdated,
 }: SceneCardProps) {
   const [title, setTitle] = useState(scene.title || `Cena ${scene.position}`);
   const [narration, setNarration] = useState(scene.narration);
@@ -207,6 +210,13 @@ export function SceneCard({
           className="w-full bg-slate-950/60 border border-white/5 hover:border-white/15 focus:border-blue-500 rounded-xl px-3.5 py-2 text-xs text-blue-200 placeholder:text-slate-600 focus:outline-none transition-all"
         />
       </div>
+
+      {/* Queries Section */}
+      <SceneQueriesSection
+        sceneId={scene.id}
+        initialQueries={scene.queries || []}
+        onQueriesUpdated={(queries) => onQueriesUpdated?.(scene.id, queries)}
+      />
     </div>
   );
 }

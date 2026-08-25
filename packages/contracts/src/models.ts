@@ -22,6 +22,27 @@ export interface Project {
   scenes_count?: number;
 }
 
+export interface SearchQueryCreate {
+  query: string;
+  query_type?: QueryType;
+  priority?: number;
+}
+
+export interface SearchQueryUpdate {
+  query?: string | null;
+  query_type?: QueryType | null;
+  priority?: number | null;
+}
+
+export interface SearchQuery {
+  id: string;
+  scene_id: string;
+  query: string;
+  query_type: QueryType;
+  priority: number;
+  created_at: string;
+}
+
 export interface SceneCreate {
   position?: number | null;
   title?: string | null;
@@ -51,6 +72,7 @@ export interface Scene {
   end_estimate?: number | null;
   created_at: string;
   updated_at: string;
+  queries?: SearchQuery[];
 }
 
 export interface SceneReorderRequest {
@@ -68,15 +90,6 @@ export interface SceneSplitRequest {
 
 export interface SceneMergeRequest {
   target_scene_id: string;
-}
-
-export interface SearchQuery {
-  id: string;
-  scene_id: string;
-  query: string;
-  query_type: QueryType;
-  priority: number;
-  created_at: string;
 }
 
 export interface MediaCandidate {

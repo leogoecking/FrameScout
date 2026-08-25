@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.health import router as health_router
 from app.api.v1.projects import router as projects_router
+from app.api.v1.queries import router as queries_router
 from app.api.v1.scenes import router as scenes_router
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -48,6 +49,7 @@ def create_application() -> FastAPI:
     app.include_router(health_router, prefix=settings.API_V1_PREFIX)
     app.include_router(projects_router, prefix=settings.API_V1_PREFIX)
     app.include_router(scenes_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(queries_router, prefix=settings.API_V1_PREFIX)
 
     return app
 

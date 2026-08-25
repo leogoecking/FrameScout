@@ -5,6 +5,15 @@ export type RightsStatus =
   | "REFERENCE_ONLY" 
   | "BLOCKED";
 
+export type QueryType =
+  | "OFFICIAL"
+  | "EVENT"
+  | "COMPANY"
+  | "PERSON"
+  | "LOCATION"
+  | "CONCEPT"
+  | "BROLL";
+
 export interface Project {
   id: string;
   name: string;
@@ -27,6 +36,27 @@ export interface ProjectUpdate {
   script_raw?: string | null;
 }
 
+export interface SearchQuery {
+  id: string;
+  scene_id: string;
+  query: string;
+  query_type: QueryType;
+  priority: number;
+  created_at: string;
+}
+
+export interface SearchQueryCreate {
+  query: string;
+  query_type?: QueryType;
+  priority?: number;
+}
+
+export interface SearchQueryUpdate {
+  query?: string | null;
+  query_type?: QueryType | null;
+  priority?: number | null;
+}
+
 export interface Scene {
   id: string;
   project_id: string;
@@ -38,6 +68,7 @@ export interface Scene {
   end_estimate?: number | null;
   created_at: string;
   updated_at: string;
+  queries?: SearchQuery[];
 }
 
 export interface SceneCreate {

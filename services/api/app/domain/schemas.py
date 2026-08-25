@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domain.enums import MediaType, QueryType, RightsStatus
 
@@ -29,6 +29,52 @@ class ProjectRead(ProjectBase):
     created_at: datetime
     updated_at: datetime
     scenes_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- Search Query Schemas ---
+
+class SearchQueryBase(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    query_type: QueryType = QueryType.BROLL
+    priority: int = Field(default=1, ge=1, le=5)
+
+    @field_validator("query_type", mode="before")
+    @classmethod
+    def normalize_query_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                return QueryType(v.upper())
+            except ValueError:
+                pass
+        return v
+
+
+class SearchQueryCreate(SearchQueryBase):
+    pass
+
+
+class SearchQueryUpdate(BaseModel):
+    query: Optional[str] = Field(None, min_length=1, max_length=500)
+    query_type: Optional[QueryType] = None
+    priority: Optional[int] = Field(None, ge=1, le=5)
+
+    @field_validator("query_type", mode="before")
+    @classmethod
+    def normalize_query_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                return QueryType(v.upper())
+            except ValueError:
+                pass
+        return v
+
+
+class SearchQueryRead(SearchQueryBase):
+    id: UUID
+    scene_id: UUID
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,6 +113,7 @@ class SceneRead(SceneBase):
     project_id: UUID
     created_at: datetime
     updated_at: datetime
+    queries: List[SearchQueryRead] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -86,22 +133,6 @@ class SceneSplitRequest(BaseModel):
 
 class SceneMergeRequest(BaseModel):
     target_scene_id: UUID
-
-
-# --- Search Query Schemas ---
-
-class SearchQueryBase(BaseModel):
-    query: str
-    query_type: QueryType = QueryType.BROLL
-    priority: int = 1
-
-
-class SearchQueryRead(SearchQueryBase):
-    id: UUID
-    scene_id: UUID
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Media Candidate Schemas ---

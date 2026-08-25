@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.domain.schemas import (
     SceneCreate,
@@ -37,6 +38,7 @@ class SceneService:
     async def list_by_project(db: AsyncSession, project_id: UUID) -> List[Scene]:
         query = (
             select(Scene)
+            .options(selectinload(Scene.queries))
             .where(Scene.project_id == project_id)
             .order_by(Scene.position.asc())
         )
@@ -45,7 +47,11 @@ class SceneService:
 
     @staticmethod
     async def get(db: AsyncSession, scene_id: UUID) -> Optional[Scene]:
-        query = select(Scene).where(Scene.id == scene_id)
+        query = (
+            select(Scene)
+            .options(selectinload(Scene.queries))
+            .where(Scene.id == scene_id)
+        )
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
@@ -53,7 +59,6 @@ class SceneService:
     async def generate_from_script(
         db: AsyncSession, project_id: UUID, overwrite: bool = True
     ) -> List[Scene]:
-        # Fetch project
         proj_query = select(Project).where(Project.id == project_id)
         proj_res = await db.execute(proj_query)
         project = proj_res.scalar_one_or_none()
