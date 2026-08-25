@@ -137,8 +137,7 @@ class FidelityEngine:
         """
         scene_context = f"{scene_title or ''} {scene_narration} {scene_visual_intent or ''}"
         media_context = (
-            f"{media_title or ''} "
-            f"{FidelityEngine._extract_metadata_text(metadata_json)}"
+            f"{media_title or ''} {FidelityEngine._extract_metadata_text(metadata_json)}"
         )
 
         # 1. Similaridade Semântica (40%)

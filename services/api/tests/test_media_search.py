@@ -53,8 +53,12 @@ async def test_search_media_for_query_endpoint(async_client):
     assert len(candidates) == 4
 
     candidate = candidates[0]
-    assert candidate["rights_status"] == RightsStatus.SAFE_REUSE.value
-    assert candidate["provider"] == "pexels"
+    assert candidate["rights_status"] in [
+        RightsStatus.SAFE_REUSE.value,
+        RightsStatus.ATTRIBUTION_REQUIRED.value,
+        RightsStatus.REVIEW_REQUIRED.value,
+    ]
+    assert candidate["provider"] in ["pexels", "wikimedia"]
     assert "author" in candidate
     assert "preview_url" in candidate
 

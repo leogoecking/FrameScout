@@ -29,7 +29,7 @@ class PexelsProvider(MediaProvider):
         return "pexels"
 
     async def search(self, query: SearchQueryBase, limit: int = 10) -> List[MediaCandidateBase]:
-        # Se não houver chave de API configurada, utiliza o sandbox determinístico
+        # Se não houver chave de API configurada, utiliza o sandbox temático inteligente
         if not self.api_key or self.api_key.strip() in ["", "mock", "test"]:
             return self._generate_sandbox_candidates(query, limit)
 
@@ -105,7 +105,6 @@ class PexelsProvider(MediaProvider):
         author = user_info.get("name", "Pexels Filmmaker")
         video_id = str(video.get("id"))
 
-        # Selecionar melhor arquivo de vídeo (HD ou original)
         files = video.get("video_files", [])
         best_file = next((f for f in files if f.get("quality") == "hd"), files[0] if files else {})
         download_url = best_file.get("link", "")
@@ -137,17 +136,286 @@ class PexelsProvider(MediaProvider):
         self, query: SearchQueryBase, limit: int
     ) -> List[MediaCandidateBase]:
         """
-        Gera candidatos realistas e seguros em modo sandbox offline
-        para garantir execução determinística sem bloqueio por falta de chave de API.
+        Catálogo B-roll multi-temático e adaptativo que seleciona fotos e vídeos
+        de acordo com as palavras-chave do projeto (Espaço, Games, Tecnologia,
+        Natureza, Negócios, Culinária, História, Saúde, etc.).
         """
         term = query.query.strip()
-        candidates: List[MediaCandidateBase] = []
+        lower = term.lower()
 
-        # Catálogo temático de imagens e vídeos de estoque Pexels/Unsplash CDN
-        broll_catalog = [
+        thematic_catalog = [
+            # 1. Jogos & Games
             {
+                "tags": [
+                    "gta",
+                    "game",
+                    "jogo",
+                    "games",
+                    "gaming",
+                    "console",
+                    "gamer",
+                    "rockstar",
+                    "videogame",
+                ],
                 "type": MediaType.IMAGE,
-                "title": f"Servidores em Datacenter - {term}",
+                "title": f"Gamer Room & Neon Gaming Setup - {term}",
+                "author": "Eren Li",
+                "preview": "https://images.pexels.com/photos/7915574/pexels-photo-7915574.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "7915574",
+            },
+            {
+                "tags": ["gta", "game", "jogo", "games", "gaming", "controller", "rockstar"],
+                "type": MediaType.VIDEO,
+                "title": f"Video Game Controller in Hands - {term}",
+                "author": "Ron Lach",
+                "preview": "https://images.pexels.com/photos/8111324/pexels-photo-8111324.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": 12.0,
+                "id": "8111324",
+            },
+            # 2. Espaço & Universo
+            {
+                "tags": [
+                    "espaco",
+                    "espaço",
+                    "space",
+                    "astronauta",
+                    "astronaut",
+                    "universo",
+                    "galaxia",
+                    "estrela",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Galaxy, Stars & Cosmic Nebula - {term}",
+                "author": "Felix Mittermeier",
+                "preview": "https://images.pexels.com/photos/956999/milky-way-starry-sky-night-sky-star-956999.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "956999",
+            },
+            {
+                "tags": ["espaco", "espaço", "space", "astronauta", "lua", "planeta"],
+                "type": MediaType.IMAGE,
+                "title": f"Full Moon and Night Sky - {term}",
+                "author": "Pixabay",
+                "preview": "https://images.pexels.com/photos/47367/full-moon-moon-bright-sky-47367.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "47367",
+            },
+            # 3. Negócios, Dinheiro & Finanças
+            {
+                "tags": [
+                    "dinheiro",
+                    "money",
+                    "banco",
+                    "bank",
+                    "mercado",
+                    "finance",
+                    "empresa",
+                    "economia",
+                    "grafico",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Stock Market Charts & Financial Growth - {term}",
+                "author": "Markus Spiske",
+                "preview": "https://images.pexels.com/photos/187041/pexels-photo-187041.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "187041",
+            },
+            {
+                "tags": [
+                    "dinheiro",
+                    "empresa",
+                    "escritorio",
+                    "escritório",
+                    "business",
+                    "office",
+                    "meeting",
+                ],
+                "type": MediaType.VIDEO,
+                "title": f"Business Team Meeting in Modern Office - {term}",
+                "author": "fauxels",
+                "preview": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": 10.0,
+                "id": "3183150",
+            },
+            # 4. Comida & Gastronomia
+            {
+                "tags": [
+                    "comida",
+                    "food",
+                    "cafe",
+                    "café",
+                    "coffee",
+                    "restaurante",
+                    "pizza",
+                    "cozinha",
+                    "chef",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Gourmet Coffee and Fresh Roast - {term}",
+                "author": "Chevanon Photography",
+                "preview": "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "312418",
+            },
+            {
+                "tags": ["comida", "food", "restaurante", "cozinha", "pizza", "chef"],
+                "type": MediaType.IMAGE,
+                "title": f"Artisanal Culinary Dish Preparation - {term}",
+                "author": "Trang Doan",
+                "preview": "https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "1099680",
+            },
+            # 5. Natureza & Paisagens
+            {
+                "tags": [
+                    "natureza",
+                    "nature",
+                    "praia",
+                    "beach",
+                    "floresta",
+                    "forest",
+                    "montanha",
+                    "mountain",
+                    "mar",
+                    "rio",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Breathtaking Mountain Landscape - {term}",
+                "author": "eberhard grossgasteiger",
+                "preview": "https://images.pexels.com/photos/443446/pexels-photo-443446.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "443446",
+            },
+            # 6. Cidade, Trânsito & Aeroportos
+            {
+                "tags": [
+                    "cidade",
+                    "city",
+                    "aeroporto",
+                    "airport",
+                    "aviao",
+                    "avião",
+                    "voo",
+                    "transito",
+                    "rua",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Airport Terminal & Travel Journey - {term}",
+                "author": "Anna Shvets",
+                "preview": "https://images.pexels.com/photos/2026324/pexels-photo-2026324.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1280,
+                "duration": None,
+                "id": "2026324",
+            },
+            # 7. Saúde & Medicina
+            {
+                "tags": [
+                    "medico",
+                    "médico",
+                    "hospital",
+                    "saude",
+                    "saúde",
+                    "doctor",
+                    "medicine",
+                    "paciente",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Healthcare Professional at Work - {term}",
+                "author": "Cedric Fauntleroy",
+                "preview": "https://images.pexels.com/photos/4270088/pexels-photo-4270088.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "4270088",
+            },
+            # 8. História, Monumentos & Arquitetura
+            {
+                "tags": [
+                    "historia",
+                    "história",
+                    "history",
+                    "roma",
+                    "rome",
+                    "monumento",
+                    "coliseu",
+                    "colosseum",
+                    "castelo",
+                    "antigo",
+                    "museu",
+                    "arqueologia",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Historic Architecture and Ancient Heritage - {term}",
+                "author": "Maurício Mascaro",
+                "preview": "https://images.pexels.com/photos/71241/pexels-photo-71241.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "71241",
+            },
+            # 9. Direito, Justiça & Tribunais
+            {
+                "tags": [
+                    "justica",
+                    "justiça",
+                    "tribunal",
+                    "processo",
+                    "advogado",
+                    "lei",
+                    "direito",
+                    "court",
+                    "law",
+                    "judge",
+                    "legal",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Legal Justice System and Law Books - {term}",
+                "author": "Sora Shimazaki",
+                "preview": "https://images.pexels.com/photos/5668772/pexels-photo-5668772.jpeg?auto=compress&cs=tinysrgb&w=800",
+                "width": 1920,
+                "height": 1080,
+                "duration": None,
+                "id": "5668772",
+            },
+            # 8. Tecnologia, Código & Cibersegurança
+            {
+                "tags": [
+                    "crowdstrike",
+                    "bsod",
+                    "windows",
+                    "codigo",
+                    "código",
+                    "programacao",
+                    "servidor",
+                    "datacenter",
+                    "cyber",
+                    "software",
+                    "tech",
+                    "ti",
+                ],
+                "type": MediaType.IMAGE,
+                "title": f"Datacenter Server Infrastructure - {term}",
                 "author": "Manuel Geissinger",
                 "preview": "https://images.pexels.com/photos/325229/pexels-photo-325229.jpeg?auto=compress&cs=tinysrgb&w=800",
                 "width": 1920,
@@ -156,8 +424,9 @@ class PexelsProvider(MediaProvider):
                 "id": "325229",
             },
             {
+                "tags": ["codigo", "código", "software", "terminal", "programador", "developer"],
                 "type": MediaType.VIDEO,
-                "title": f"Linhas de Código e Terminal - {term}",
+                "title": f"Coding and Terminal Software Development - {term}",
                 "author": "Pressmaster",
                 "preview": "https://images.pexels.com/photos/546819/pexels-photo-546819.jpeg?auto=compress&cs=tinysrgb&w=800",
                 "width": 3840,
@@ -165,51 +434,27 @@ class PexelsProvider(MediaProvider):
                 "duration": 14.5,
                 "id": "3129957",
             },
-            {
-                "type": MediaType.IMAGE,
-                "title": f"Saguão de Aeroporto e Painel de Voos - {term}",
-                "author": "Anna Shvets",
-                "preview": "https://images.pexels.com/photos/2026324/pexels-photo-2026324.jpeg?auto=compress&cs=tinysrgb&w=800",
-                "width": 1920,
-                "height": 1280,
-                "duration": None,
-                "id": "2026324",
-            },
-            {
-                "type": MediaType.VIDEO,
-                "title": f"Monitor de Computador com Falha de Sistema - {term}",
-                "author": "Mikhail Nilov",
-                "preview": "https://images.pexels.com/photos/577585/pexels-photo-577585.jpeg?auto=compress&cs=tinysrgb&w=800",
-                "width": 1920,
-                "height": 1080,
-                "duration": 9.2,
-                "id": "7534244",
-            },
-            {
-                "type": MediaType.IMAGE,
-                "title": f"Equipe de TI e Suporte Técnico - {term}",
-                "author": "fauxels",
-                "preview": "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800",
-                "width": 1920,
-                "height": 1080,
-                "duration": None,
-                "id": "3183150",
-            },
-            {
-                "type": MediaType.IMAGE,
-                "title": f"Mundo Digital e Cibersegurança - {term}",
-                "author": "Kevin Ku",
-                "preview": "https://images.pexels.com/photos/577585/pexels-photo-577585.jpeg?auto=compress&cs=tinysrgb&w=800",
-                "width": 1920,
-                "height": 1080,
-                "duration": None,
-                "id": "577585",
-            },
         ]
 
-        count = min(limit, len(broll_catalog))
+        matched_items: List[Dict[str, Any]] = []
+        for item in thematic_catalog:
+            tags = item.get("tags")
+            if isinstance(tags, list) and any(str(tag) in lower for tag in tags):
+                matched_items.append(item)
+
+        # Se não houver match direto, utiliza uma rotação baseada no hash do termo
+        selected_items: List[Dict[str, Any]]
+        if not matched_items:
+            term_hash = sum(ord(c) for c in term)
+            start_idx = term_hash % len(thematic_catalog)
+            selected_items = thematic_catalog[start_idx:] + thematic_catalog[:start_idx]
+        else:
+            selected_items = matched_items
+
+        candidates: List[MediaCandidateBase] = []
+        count = min(limit, len(selected_items))
         for i in range(count):
-            item = broll_catalog[i]
+            item = selected_items[i]
             dur_val = item["duration"]
             duration_float = float(str(dur_val)) if dur_val is not None else None
 

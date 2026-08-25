@@ -192,9 +192,7 @@ class RenderService:
 
                             meta_dict = candidate.metadata_json or {}
                             raw_url = (
-                                candidate.preview_url
-                                or meta_dict.get("file_url")
-                                or candidate.url
+                                candidate.preview_url or meta_dict.get("file_url") or candidate.url
                             )
                             download_url = RenderService._sanitize_media_url(raw_url)
 
@@ -205,10 +203,7 @@ class RenderService:
                             )
 
                             ext = ".jpg"
-                            if (
-                                is_video_type
-                                or "video" in download_url.lower()
-                            ):
+                            if is_video_type or "video" in download_url.lower():
                                 ext = ".mp4"
                             elif download_url.lower().endswith(".png"):
                                 ext = ".png"
