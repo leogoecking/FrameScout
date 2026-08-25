@@ -106,7 +106,7 @@ describe("Media Provider UI (Pexels)", () => {
     );
 
     const searchBtn = screen.getByRole("button", {
-      name: /Buscar Mídia no Pexels|Atualizar Busca Pexels/i,
+      name: /Buscar Mídias|Atualizar Busca/i,
     });
     fireEvent.click(searchBtn);
 

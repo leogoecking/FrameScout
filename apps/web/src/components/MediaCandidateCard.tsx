@@ -2,31 +2,96 @@
 "use client";
 
 import { useState } from "react";
-import { MediaCandidate } from "@/types";
+import { MediaCandidate, RightsStatus } from "@/types";
 import { 
   ShieldCheck, 
+  AlertCircle,
+  HelpCircle,
   Film, 
   Image as ImageIcon, 
   ExternalLink, 
   Copy, 
   Check,
-  AlertTriangle
+  AlertTriangle,
+  FileText
 } from "lucide-react";
 
 interface MediaCandidateCardProps {
   candidate: MediaCandidate;
 }
 
+const rightsBadgeStyles: Record<
+  RightsStatus,
+  { label: string; bg: string; text: string; border: string; icon: any; tooltip: string }
+> = {
+  SAFE_REUSE: {
+    label: "SAFE_REUSE",
+    bg: "bg-emerald-950/80",
+    text: "text-emerald-300",
+    border: "border-emerald-500/30",
+    icon: ShieldCheck,
+    tooltip: "Livre para uso comercial sem necessidade de atribuição obrigatória.",
+  },
+  ATTRIBUTION_REQUIRED: {
+    label: "ATRIBUIÇÃO OBRIGATÓRIA",
+    bg: "bg-amber-950/80",
+    text: "text-amber-300",
+    border: "border-amber-500/30",
+    icon: AlertCircle,
+    tooltip: "Requer citação de créditos e link de licença no vídeo final.",
+  },
+  REVIEW_REQUIRED: {
+    label: "REVISÃO NECESSÁRIA",
+    bg: "bg-purple-950/80",
+    text: "text-purple-300",
+    border: "border-purple-500/30",
+    icon: HelpCircle,
+    tooltip: "Uso restrito, marca registrada ou licença não verificada automaticamente.",
+  },
+  REFERENCE_ONLY: {
+    label: "APENAS REFERÊNCIA",
+    bg: "bg-blue-950/80",
+    text: "text-blue-300",
+    border: "border-blue-500/30",
+    icon: HelpCircle,
+    tooltip: "Material protegido. Utilize apenas como referência de direção de arte.",
+  },
+  BLOCKED: {
+    label: "BLOQUEADO",
+    bg: "bg-red-950/80",
+    text: "text-red-300",
+    border: "border-red-500/30",
+    icon: AlertTriangle,
+    tooltip: "Mídia com restrição jurídica ativa. Não utilizar.",
+  },
+};
+
 export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
-  const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedCredit, setCopiedCredit] = useState(false);
   const [imgError, setImgError] = useState(false);
   const isVideo = candidate.media_type === "VIDEO";
+
+  const statusConfig =
+    rightsBadgeStyles[candidate.rights_status] || rightsBadgeStyles.REVIEW_REQUIRED;
+  const StatusIcon = statusConfig.icon;
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(candidate.url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2500);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleCopyCredit = async () => {
+    try {
+      const creditLine = candidate.attribution || `Mídia por ${candidate.author || "Autor"} via ${candidate.provider}`;
+      await navigator.clipboard.writeText(creditLine);
+      setCopiedCredit(true);
+      setTimeout(() => setCopiedCredit(false), 2500);
     } catch {
       // Fallback
     }
@@ -46,7 +111,7 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
         {candidate.preview_url && !imgError ? (
           <img
             src={candidate.preview_url}
-            alt={candidate.title || "Mídia Pexels"}
+            alt={candidate.title || "Mídia"}
             onError={() => setImgError(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
@@ -73,32 +138,44 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
 
           {/* Legal Rights Badge */}
           <div
-            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-950/80 backdrop-blur border border-emerald-500/30 text-emerald-300 text-[10px] font-semibold font-mono"
-            title="Licença Pexels: Livre para uso comercial, sem necessidade de atribuição obrigatória."
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-lg backdrop-blur border text-[10px] font-semibold font-mono ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+            title={statusConfig.tooltip}
           >
-            <ShieldCheck className="h-3 w-3 text-emerald-400" />
-            <span>SAFE_REUSE</span>
+            <StatusIcon className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[140px]">{statusConfig.label}</span>
           </div>
         </div>
 
         {/* Hover Action Overlay */}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2.5">
           <a
             href={candidate.url}
             target="_blank"
             rel="noreferrer"
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
-            title="Ver no Pexels"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
+            title="Ver na fonte oficial"
           >
             <ExternalLink className="h-4 w-4" />
           </a>
+
           <button
             onClick={handleCopyLink}
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
             title="Copiar URL"
           >
-            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+            {copiedUrl ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
           </button>
+
+          {candidate.rights_status === "ATTRIBUTION_REQUIRED" && (
+            <button
+              onClick={handleCopyCredit}
+              className="px-2.5 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 text-[11px] font-medium flex items-center gap-1 transition-all backdrop-blur"
+              title="Copiar texto de atribuição obrigatória"
+            >
+              {copiedCredit ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <FileText className="h-3.5 w-3.5" />}
+              <span>{copiedCredit ? "Copiado!" : "Copiar Crédito"}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -115,10 +192,21 @@ export function MediaCandidateCard({ candidate }: MediaCandidateCardProps) {
           )}
         </div>
 
+        {/* License Name */}
+        {candidate.license && (
+          <p className="text-[10px] text-slate-400 truncate" title={candidate.license}>
+            Licença: <span className="text-slate-300 font-mono">{candidate.license}</span>
+          </p>
+        )}
+
         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-white/5">
-          <span className="truncate">Por {candidate.author || "Pexels Creator"}</span>
-          <span className="text-[10px] uppercase font-mono text-slate-500 font-semibold shrink-0">
-            Pexels
+          <span className="truncate">Por {candidate.author || "Autor Desconhecido"}</span>
+          <span className={`text-[10px] uppercase font-mono font-semibold shrink-0 px-1.5 py-0.5 rounded ${
+            candidate.provider === "wikimedia"
+              ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+          }`}>
+            {candidate.provider === "wikimedia" ? "Wikimedia" : "Pexels"}
           </span>
         </div>
       </div>

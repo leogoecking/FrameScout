@@ -18,13 +18,13 @@ export default function RootLayout({
         <header className="border-b border-white/10 bg-slate-950/70 backdrop-blur sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-emerald-500 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
                 FS
               </div>
               <div>
                 <span className="font-semibold text-lg tracking-tight text-white">FrameScout</span>
-                <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                  Sprint 4
+                <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+                  Sprint 5
                 </span>
               </div>
             </div>

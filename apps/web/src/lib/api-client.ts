@@ -287,13 +287,19 @@ export async function deleteQuery(queryId: string): Promise<void> {
   }
 }
 
-// --- Media Candidates (Pexels / Open Stock) ---
+// --- Media Candidates (Pexels + Wikimedia Commons) ---
 
 export async function searchQueryMedia(
   queryId: string,
+  provider?: string,
   limit: number = 8
 ): Promise<MediaCandidate[]> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/queries/${queryId}/search?limit=${limit}`, {
+  const params = new URLSearchParams({ limit: limit.toString() });
+  if (provider) {
+    params.set("provider", provider);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/queries/${queryId}/search?${params.toString()}`, {
     method: "POST",
   });
   if (!res.ok) {
@@ -305,10 +311,16 @@ export async function searchQueryMedia(
 
 export async function searchSceneMedia(
   sceneId: string,
+  provider?: string,
   limitPerQuery: number = 4
 ): Promise<MediaCandidate[]> {
+  const params = new URLSearchParams({ limit_per_query: limitPerQuery.toString() });
+  if (provider) {
+    params.set("provider", provider);
+  }
+
   const res = await fetch(
-    `${API_BASE_URL}/api/v1/scenes/${sceneId}/search?limit_per_query=${limitPerQuery}`,
+    `${API_BASE_URL}/api/v1/scenes/${sceneId}/search?${params.toString()}`,
     {
       method: "POST",
     }

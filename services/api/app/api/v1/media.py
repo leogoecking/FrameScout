@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,15 +17,20 @@ DbSession = Annotated[AsyncSession, Depends(get_db_session)]
     "/queries/{query_id}/search",
     response_model=List[MediaCandidateRead],
     status_code=status.HTTP_201_CREATED,
-    summary="Buscar candidatos de mídia para uma query no Pexels",
+    summary="Buscar candidatos de mídia para uma query (Pexels / Wikimedia)",
 )
 async def search_query_media(
     query_id: UUID,
     db: DbSession,
+    provider: Optional[str] = Query(
+        default=None, description="Filtrar provedor ('pexels' ou 'wikimedia')"
+    ),
     limit: int = Query(default=8, ge=1, le=50),
 ) -> List[MediaCandidateRead]:
     try:
-        candidates = await MediaService.search_for_query(db, query_id, limit=limit)
+        candidates = await MediaService.search_for_query(
+            db, query_id, provider_name=provider, limit=limit
+        )
         return [MediaCandidateRead.model_validate(c) for c in candidates]
     except KeyError as e:
         raise HTTPException(
@@ -56,16 +61,19 @@ async def list_query_candidates(
     "/scenes/{scene_id}/search",
     response_model=List[MediaCandidateRead],
     status_code=status.HTTP_201_CREATED,
-    summary="Buscar mídia no Pexels para todas as queries de uma cena",
+    summary="Buscar mídia para todas as queries de uma cena (Multi-Provider)",
 )
 async def search_scene_media(
     scene_id: UUID,
     db: DbSession,
+    provider: Optional[str] = Query(
+        default=None, description="Filtrar provedor ('pexels' ou 'wikimedia')"
+    ),
     limit_per_query: int = Query(default=4, ge=1, le=20),
 ) -> List[MediaCandidateRead]:
     try:
         candidates = await MediaService.search_for_scene(
-            db, scene_id, limit_per_query=limit_per_query
+            db, scene_id, provider_name=provider, limit_per_query=limit_per_query
         )
         return [MediaCandidateRead.model_validate(c) for c in candidates]
     except KeyError as e:

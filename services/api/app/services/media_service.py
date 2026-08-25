@@ -1,12 +1,22 @@
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 from uuid import UUID
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.schemas import SearchQueryBase
+from app.domain.enums import QueryType
+from app.domain.schemas import MediaCandidateBase, SearchQueryBase
 from app.models.entities import MediaCandidate, Scene, SearchQuery
+from app.providers.base import MediaProvider
 from app.providers.pexels import PexelsProvider
+from app.providers.wikimedia import WikimediaProvider
+
+
+def get_providers_map() -> Dict[str, MediaProvider]:
+    return {
+        "pexels": PexelsProvider(),
+        "wikimedia": WikimediaProvider(),
+    }
 
 
 class MediaService:
@@ -56,6 +66,7 @@ class MediaService:
     async def search_for_query(
         db: AsyncSession,
         search_query_id: UUID,
+        provider_name: Optional[str] = None,
         limit: int = 8,
         overwrite: bool = True,
     ) -> List[MediaCandidate]:
@@ -66,15 +77,37 @@ class MediaService:
         if not search_query:
             raise KeyError("Query de busca não encontrada")
 
-        provider = PexelsProvider()
-        raw_candidates = await provider.search(
-            query=SearchQueryBase(
-                query=search_query.query,
-                query_type=search_query.query_type,
-                priority=search_query.priority,
-            ),
-            limit=limit,
-        )
+        providers_map = get_providers_map()
+        selected_providers: List[MediaProvider] = []
+
+        if provider_name and provider_name.lower() in providers_map:
+            selected_providers.append(providers_map[provider_name.lower()])
+        else:
+            # Seleção automática por intenção de busca
+            if search_query.query_type in [
+                QueryType.EVENT,
+                QueryType.OFFICIAL,
+                QueryType.COMPANY,
+                QueryType.PERSON,
+                QueryType.LOCATION,
+            ]:
+                selected_providers = [providers_map["wikimedia"], providers_map["pexels"]]
+            else:
+                selected_providers = [providers_map["pexels"], providers_map["wikimedia"]]
+
+        raw_candidates: List[MediaCandidateBase] = []
+        limit_per_prov = max(1, limit // len(selected_providers))
+
+        for prov in selected_providers:
+            results = await prov.search(
+                query=SearchQueryBase(
+                    query=search_query.query,
+                    query_type=search_query.query_type,
+                    priority=search_query.priority,
+                ),
+                limit=limit_per_prov,
+            )
+            raw_candidates.extend(results)
 
         if overwrite:
             del_stmt = delete(MediaCandidate).where(
@@ -83,7 +116,13 @@ class MediaService:
             await db.execute(del_stmt)
 
         created_entities: List[MediaCandidate] = []
+        seen_ext: Set[str] = set()
+
         for rc in raw_candidates:
+            if rc.external_id in seen_ext:
+                continue
+            seen_ext.add(rc.external_id)
+
             mc = MediaCandidate(
                 search_query_id=search_query_id,
                 provider=rc.provider,
@@ -115,6 +154,7 @@ class MediaService:
     async def search_for_scene(
         db: AsyncSession,
         scene_id: UUID,
+        provider_name: Optional[str] = None,
         limit_per_query: int = 4,
     ) -> List[MediaCandidate]:
         scene_res = await db.execute(select(Scene).where(Scene.id == scene_id))
@@ -138,6 +178,7 @@ class MediaService:
             candidates = await MediaService.search_for_query(
                 db=db,
                 search_query_id=q.id,
+                provider_name=provider_name,
                 limit=limit_per_query,
                 overwrite=True,
             )
