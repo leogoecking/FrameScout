@@ -308,9 +308,17 @@ class EntityEngine:
                 )
             )
 
-        # 5. Ordenar por confiança decrescente e posição no texto
+        # 5. Ordenar por confiança decrescente e de-duplicar por texto normalizado
         entities.sort(key=lambda e: e.confidence, reverse=True)
-        return entities
+        unique_entities: List[ExtractedEntity] = []
+        seen_texts: Set[str] = set()
+        for ent in entities:
+            norm_key = ent.text.strip().lower()
+            if norm_key not in seen_texts:
+                seen_texts.add(norm_key)
+                unique_entities.append(ent)
+
+        return unique_entities
 
     @classmethod
     def generate_queries_from_entities(

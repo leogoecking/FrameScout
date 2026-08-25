@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ExtractedEntity, SearchQuery, SearchQueryCreate, SearchQueryUpdate } from "@/types";
+import { ExtractedEntity, QueryType, SearchQuery, SearchQueryCreate, SearchQueryUpdate } from "@/types";
 import { 
   createQuery, 
   deleteQuery, 
@@ -138,8 +138,31 @@ export function SceneQueriesSection({
 
   const handleAddEntityAsQuery = async (entity: ExtractedEntity) => {
     try {
+      let qType: QueryType = "BROLL";
+      let suffix = "broll";
+      if (entity.category === "ORGANIZATION") {
+        qType = "OFFICIAL";
+        suffix = "official";
+      } else if (entity.category === "PERSON") {
+        qType = "PERSON";
+        suffix = "portrait";
+      } else if (entity.category === "EVENT") {
+        qType = "EVENT";
+        suffix = "footage";
+      } else if (entity.category === "PRODUCT") {
+        qType = "OFFICIAL";
+        suffix = "official";
+      } else if (entity.category === "TECHNOLOGY") {
+        qType = "CONCEPT";
+        suffix = "technology";
+      } else if (entity.category === "LOCATION") {
+        qType = "LOCATION";
+        suffix = "view";
+      }
+
       const created = await createQuery(sceneId, {
-        query: `${entity.text} ${entity.category === "ORGANIZATION" ? "official" : "broll"}`,
+        query: `${entity.text} ${suffix}`,
+        query_type: qType,
         priority: 2,
       });
       notify([...queries, created]);

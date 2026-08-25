@@ -149,7 +149,8 @@ async def extract_project_entities(
     }
     total_count = 0
 
-    for sc in project.scenes or []:
+    scenes = sorted(project.scenes or [], key=lambda s: s.position)
+    for sc in scenes:
         c_text = f"{sc.title or ''} {sc.narration} {sc.visual_intent or ''}".strip()
         sc_ents = EntityEngine.extract_entities(c_text)
         sc_queries = EntityEngine.generate_queries_from_entities(sc_ents, sc.title or "")
