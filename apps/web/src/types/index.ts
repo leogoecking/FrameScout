@@ -5,6 +5,8 @@ export type RightsStatus =
   | "REFERENCE_ONLY" 
   | "BLOCKED";
 
+export type MediaType = "IMAGE" | "VIDEO" | "AUDIO";
+
 export type QueryType =
   | "OFFICIAL"
   | "EVENT"
@@ -43,6 +45,7 @@ export interface SearchQuery {
   query_type: QueryType;
   priority: number;
   created_at: string;
+  media_candidates?: MediaCandidate[];
 }
 
 export interface SearchQueryCreate {
@@ -55,6 +58,27 @@ export interface SearchQueryUpdate {
   query?: string | null;
   query_type?: QueryType | null;
   priority?: number | null;
+}
+
+export interface MediaCandidate {
+  id: string;
+  search_query_id?: string | null;
+  provider: string;
+  external_id: string;
+  title?: string | null;
+  url: string;
+  preview_url: string;
+  media_type: MediaType;
+  width?: number | null;
+  height?: number | null;
+  duration?: number | null;
+  author?: string | null;
+  license?: string | null;
+  attribution?: string | null;
+  rights_status: RightsStatus;
+  fidelity_score?: number | null;
+  metadata_json?: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface Scene {

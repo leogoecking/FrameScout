@@ -1,5 +1,6 @@
 import { 
   HealthData, 
+  MediaCandidate,
   Project, 
   ProjectCreate, 
   ProjectUpdate, 
@@ -284,4 +285,70 @@ export async function deleteQuery(queryId: string): Promise<void> {
     const msg = await parseErrorMessage(res, `Failed to delete query: ${res.status}`);
     throw new Error(msg);
   }
+}
+
+// --- Media Candidates (Pexels / Open Stock) ---
+
+export async function searchQueryMedia(
+  queryId: string,
+  limit: number = 8
+): Promise<MediaCandidate[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/queries/${queryId}/search?limit=${limit}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to search query media: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function searchSceneMedia(
+  sceneId: string,
+  limitPerQuery: number = 4
+): Promise<MediaCandidate[]> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/scenes/${sceneId}/search?limit_per_query=${limitPerQuery}`,
+    {
+      method: "POST",
+    }
+  );
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to search scene media: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function listSceneCandidates(sceneId: string): Promise<MediaCandidate[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/candidates`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to list scene candidates: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function listQueryCandidates(queryId: string): Promise<MediaCandidate[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/queries/${queryId}/candidates`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to list query candidates: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function getCandidate(candidateId: string): Promise<MediaCandidate> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to get candidate: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
 }

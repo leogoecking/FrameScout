@@ -41,6 +41,7 @@ export interface SearchQuery {
   query_type: QueryType;
   priority: number;
   created_at: string;
+  media_candidates?: MediaCandidate[];
 }
 
 export interface SceneCreate {

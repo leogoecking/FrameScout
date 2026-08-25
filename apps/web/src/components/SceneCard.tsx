@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Scene, SceneUpdate, SearchQuery } from "@/types";
 import { SceneQueriesSection } from "@/components/SceneQueriesSection";
+import { MediaGallery } from "@/components/MediaGallery";
 import { 
   Clock, 
   ChevronUp, 
@@ -223,6 +224,12 @@ export function SceneCard({
         sceneId={scene.id}
         initialQueries={scene.queries || []}
         onQueriesUpdated={(queries) => onQueriesUpdated?.(scene.id, queries)}
+      />
+
+      {/* Media Gallery Section */}
+      <MediaGallery
+        sceneId={scene.id}
+        hasQueries={(scene.queries?.length || 0) > 0}
       />
     </div>
   );
