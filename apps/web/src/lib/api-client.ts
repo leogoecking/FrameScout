@@ -14,7 +14,7 @@ import {
   SelectedAsset,
   SelectedAssetCreate,
   SelectedAssetUpdate,
-  VisualPlanExport, RenderJob, RenderJobCreate, VoiceOption
+  VisualPlanExport, RenderJob, RenderJobCreate, VoiceOption, ProjectFidelityMetrics
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -488,4 +488,28 @@ export async function getRenderJob(jobId: string): Promise<RenderJob> {
 
 export function getRenderVideoStreamUrl(jobId: string): string {
   return `${API_BASE_URL}/api/v1/render-jobs/${jobId}/stream`;
+}
+
+// --- Semantic Ranking & Fidelity Score ---
+
+export async function rerankSceneCandidates(sceneId: string): Promise<MediaCandidate[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/rerank`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to rerank scene candidates: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function getProjectFidelityMetrics(projectId: string): Promise<ProjectFidelityMetrics> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/fidelity-metrics`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to get project fidelity metrics: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
 }

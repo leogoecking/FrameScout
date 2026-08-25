@@ -15,7 +15,9 @@ import {
   AlertTriangle, 
   FileText,
   Pin,
-  Maximize2
+  Maximize2,
+  Sparkles,
+  ChevronDown
 } from "lucide-react";
 
 interface MediaCandidateCardProps {
@@ -84,6 +86,7 @@ export function MediaCandidateCard({
   const [imgError, setImgError] = useState(false);
   const [framingMode, setFramingMode] = useState<string>(currentFramingMode);
   const [selecting, setSelecting] = useState(false);
+  const [showFidelityDetails, setShowFidelityDetails] = useState(false);
 
   useEffect(() => {
     setFramingMode(currentFramingMode || "FILL");
@@ -93,6 +96,12 @@ export function MediaCandidateCard({
   const statusConfig =
     rightsBadgeStyles[candidate.rights_status] || rightsBadgeStyles.REVIEW_REQUIRED;
   const StatusIcon = statusConfig.icon;
+
+  const fidelity = candidate.fidelity_score !== null && candidate.fidelity_score !== undefined
+    ? Math.round(candidate.fidelity_score * 100)
+    : 75;
+
+  const fidelityBreakdown = candidate.metadata_json?.fidelity_breakdown;
 
   const handleCopyLink = async () => {
     try {
@@ -200,13 +209,24 @@ export function MediaCandidateCard({
             )}
           </div>
 
-          {/* Legal Rights Badge */}
+          {/* Fidelity Score Badge (Sprint 11/12) */}
           <div
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-lg backdrop-blur border text-[10px] font-semibold font-mono ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
-            title={statusConfig.tooltip}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowFidelityDetails(!showFidelityDetails);
+            }}
+            className={`pointer-events-auto cursor-pointer px-2 py-0.5 rounded-lg backdrop-blur border text-[10px] font-mono font-bold flex items-center gap-1 shadow transition-all ${
+              fidelity >= 80
+                ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/80"
+                : fidelity >= 50
+                ? "bg-amber-950/80 text-amber-300 border-amber-500/40 hover:bg-amber-900/80"
+                : "bg-slate-900/80 text-slate-300 border-slate-600/40 hover:bg-slate-800/80"
+            }`}
+            title="Clique para ver o detalhamento da pontuação de fidelidade"
           >
-            <StatusIcon className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[140px]">{statusConfig.label}</span>
+            <Sparkles className="h-3 w-3 shrink-0" />
+            <span>{fidelity}% Fidelidade</span>
+            <ChevronDown className={`h-2.5 w-2.5 transition-transform ${showFidelityDetails ? "rotate-180" : ""}`} />
           </div>
         </div>
 
@@ -224,7 +244,7 @@ export function MediaCandidateCard({
             href={candidate.url}
             target="_blank"
             rel="noreferrer"
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur cursor-pointer"
             title="Ver na fonte oficial"
           >
             <ExternalLink className="h-4 w-4" />
@@ -233,7 +253,7 @@ export function MediaCandidateCard({
           <button
             type="button"
             onClick={handleCopyLink}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur cursor-pointer"
             title="Copiar URL"
           >
             {copiedUrl ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
@@ -243,7 +263,7 @@ export function MediaCandidateCard({
             <button
               type="button"
               onClick={handleCopyCredit}
-              className="px-2.5 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 text-[11px] font-medium flex items-center gap-1 transition-all backdrop-blur"
+              className="px-2.5 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 text-[11px] font-medium flex items-center gap-1 transition-all backdrop-blur cursor-pointer"
               title="Copiar texto de atribuição obrigatória"
             >
               {copiedCredit ? (
@@ -256,6 +276,23 @@ export function MediaCandidateCard({
           )}
         </div>
       </div>
+
+      {/* Fidelity Score Breakdown Popover */}
+      {showFidelityDetails && (
+        <div className="p-3 bg-slate-900 border-b border-white/10 text-[11px] space-y-1.5 animate-fade-in">
+          <div className="flex items-center justify-between text-slate-300 font-semibold border-b border-white/10 pb-1">
+            <span>Avaliação de Fidelidade</span>
+            <span className="font-mono text-emerald-400">{fidelity}/100</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 text-slate-400 font-mono text-[10px]">
+            <div>• Semântica: <span className="text-white">{fidelityBreakdown?.semantic ?? (fidelity * 0.4).toFixed(1)}/40</span></div>
+            <div>• Entidades: <span className="text-white">{fidelityBreakdown?.entities ?? (fidelity * 0.25).toFixed(1)}/25</span></div>
+            <div>• Autoridade: <span className="text-white">{fidelityBreakdown?.authority ?? "14.0"}/15</span></div>
+            <div>• Contexto: <span className="text-white">{fidelityBreakdown?.temporal ?? "10.0"}/10</span></div>
+            <div>• Resolução: <span className="text-white">{fidelityBreakdown?.quality ?? "10.0"}/10</span></div>
+          </div>
+        </div>
+      )}
 
       {/* Info Content Area */}
       <div className="p-3.5 space-y-2.5 text-xs">
@@ -271,6 +308,15 @@ export function MediaCandidateCard({
               {candidate.width}x{candidate.height}
             </span>
           )}
+        </div>
+
+        {/* Legal Rights Badge */}
+        <div
+          className={`flex items-center gap-1 px-2 py-0.5 rounded-lg backdrop-blur border text-[10px] font-semibold font-mono w-fit ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+          title={statusConfig.tooltip}
+        >
+          <StatusIcon className="h-3 w-3 shrink-0" />
+          <span className="truncate max-w-[180px]">{statusConfig.label}</span>
         </div>
 
         {/* License Name */}
@@ -313,7 +359,7 @@ export function MediaCandidateCard({
               type="button"
               onClick={handleToggleSelect}
               disabled={selecting}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                 isSelected
                   ? "bg-emerald-600/20 hover:bg-red-600/20 text-emerald-400 hover:text-red-400 border border-emerald-500/30 hover:border-red-500/30"
                   : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20"

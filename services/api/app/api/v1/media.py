@@ -117,3 +117,39 @@ async def get_candidate(
             detail="Candidato de mídia não encontrado",
         )
     return MediaCandidateRead.model_validate(candidate)
+
+
+@router.post(
+    "/scenes/{scene_id}/rerank",
+    response_model=List[MediaCandidateRead],
+    summary="Recalcular o Fidelity Score e reordenar candidatos da cena",
+)
+async def rerank_scene_candidates(
+    scene_id: UUID,
+    db: DbSession,
+) -> List[MediaCandidateRead]:
+    try:
+        candidates = await MediaService.rerank_scene_candidates(db, scene_id)
+        return [MediaCandidateRead.model_validate(c) for c in candidates]
+    except KeyError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e).strip("'\""),
+        ) from e
+
+
+@router.get(
+    "/projects/{project_id}/fidelity-metrics",
+    summary="Obter métricas consolidadas de fidelidade visual do projeto",
+)
+async def get_project_fidelity_metrics(
+    project_id: UUID,
+    db: DbSession,
+):
+    try:
+        return await MediaService.get_project_fidelity_metrics(db, project_id)
+    except KeyError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e).strip("'\""),
+        ) from e

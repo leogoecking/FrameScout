@@ -213,3 +213,21 @@ export interface VoiceOption {
   id: string;
   name: string;
 }
+
+export interface FidelityBreakdown {
+  semantic: number;
+  entities: number;
+  authority: number;
+  temporal: number;
+  quality: number;
+  total: number;
+}
+
+export interface ProjectFidelityMetrics {
+  average_fidelity: number;
+  high_fidelity_count: number;
+  broll_count: number;
+  reference_count: number;
+  scenes_covered: number;
+  total_scenes: number;
+}

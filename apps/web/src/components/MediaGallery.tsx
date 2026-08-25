@@ -7,7 +7,8 @@ import {
   searchSceneMedia, 
   listSceneSelectedAssets, 
   selectAssetForScene, 
-  removeSelectedAsset 
+  removeSelectedAsset,
+  rerankSceneCandidates
 } from "@/lib/api-client";
 import { MediaCandidateCard } from "@/components/MediaCandidateCard";
 import { 
@@ -15,7 +16,9 @@ import {
   Film, 
   Loader2, 
   AlertCircle,
-  FolderOpen
+  FolderOpen,
+  RefreshCw,
+  SlidersHorizontal
 } from "lucide-react";
 
 interface MediaGalleryProps {
@@ -34,8 +37,10 @@ export function MediaGallery({
   const [candidates, setCandidates] = useState<MediaCandidate[]>(initialCandidates);
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
   const [filter, setFilter] = useState<"ALL" | "PEXELS" | "WIKIMEDIA" | "IMAGE" | "VIDEO">("ALL");
+  const [fidelityFilter, setFidelityFilter] = useState<"ALL" | "HIGH" | "BROLL">("ALL");
   const [selectedProvider, setSelectedProvider] = useState<string>("all");
   const [loading, setLoading] = useState(false);
+  const [reranking, setReranking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Auto-fetch candidates and selected assets when sceneId changes
@@ -69,7 +74,7 @@ export function MediaGallery({
 
     setLoading(true);
     setError(null);
-    setFilter("ALL"); // Reset filter to show all newly fetched results
+    setFilter("ALL");
     try {
       const provParam = selectedProvider === "all" ? undefined : selectedProvider;
       const results = await searchSceneMedia(sceneId, provParam, 4);
@@ -78,6 +83,19 @@ export function MediaGallery({
       setError(err?.message || "Erro ao buscar mídias.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRerank = async () => {
+    setReranking(true);
+    setError(null);
+    try {
+      const results = await rerankSceneCandidates(sceneId);
+      setCandidates(results);
+    } catch (err: any) {
+      setError(err?.message || "Erro ao recalcular fidelidade semântica.");
+    } finally {
+      setReranking(false);
     }
   };
 
@@ -106,10 +124,19 @@ export function MediaGallery({
   };
 
   const filteredCandidates = candidates.filter((c) => {
-    if (filter === "PEXELS") return c.provider.toLowerCase() === "pexels";
-    if (filter === "WIKIMEDIA") return c.provider.toLowerCase() === "wikimedia";
-    if (filter === "IMAGE") return c.media_type === "IMAGE";
-    if (filter === "VIDEO") return c.media_type === "VIDEO";
+    // Provider & Type filter
+    if (filter === "PEXELS" && c.provider.toLowerCase() !== "pexels") return false;
+    if (filter === "WIKIMEDIA" && c.provider.toLowerCase() !== "wikimedia") return false;
+    if (filter === "IMAGE" && c.media_type !== "IMAGE") return false;
+    if (filter === "VIDEO" && c.media_type !== "VIDEO") return false;
+
+    // Fidelity filter (Sprint 11/12)
+    const score = c.fidelity_score !== null && c.fidelity_score !== undefined
+      ? Math.round(c.fidelity_score * 100)
+      : 75;
+    if (fidelityFilter === "HIGH" && score < 80) return false;
+    if (fidelityFilter === "BROLL" && (score < 50 || score >= 80)) return false;
+
     return true;
   });
 
@@ -125,7 +152,7 @@ export function MediaGallery({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
             <Film className="h-3.5 w-3.5 text-blue-400" />
-            <span>Mídias & Procedência ({candidates.length})</span>
+            <span>Mídias & Fidelidade ({candidates.length})</span>
           </span>
 
           {candidates.length > 0 && (
@@ -133,7 +160,7 @@ export function MediaGallery({
               <button
                 type="button"
                 onClick={() => setFilter("ALL")}
-                className={`px-2 py-0.5 rounded-md transition-all ${
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
                   filter === "ALL"
                     ? "bg-blue-600 text-white font-medium shadow-xs"
                     : "text-slate-400 hover:text-white"
@@ -145,7 +172,7 @@ export function MediaGallery({
                 <button
                   type="button"
                   onClick={() => setFilter("PEXELS")}
-                  className={`px-2 py-0.5 rounded-md transition-all ${
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
                     filter === "PEXELS"
                       ? "bg-emerald-600 text-white font-medium shadow-xs"
                       : "text-slate-400 hover:text-white"
@@ -158,7 +185,7 @@ export function MediaGallery({
                 <button
                   type="button"
                   onClick={() => setFilter("WIKIMEDIA")}
-                  className={`px-2 py-0.5 rounded-md transition-all ${
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
                     filter === "WIKIMEDIA"
                       ? "bg-indigo-600 text-white font-medium shadow-xs"
                       : "text-slate-400 hover:text-white"
@@ -170,7 +197,7 @@ export function MediaGallery({
               <button
                 type="button"
                 onClick={() => setFilter("IMAGE")}
-                className={`px-2 py-0.5 rounded-md transition-all ${
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
                   filter === "IMAGE"
                     ? "bg-blue-600 text-white font-medium shadow-xs"
                     : "text-slate-400 hover:text-white"
@@ -182,7 +209,7 @@ export function MediaGallery({
                 <button
                   type="button"
                   onClick={() => setFilter("VIDEO")}
-                  className={`px-2 py-0.5 rounded-md transition-all ${
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
                     filter === "VIDEO"
                       ? "bg-blue-600 text-white font-medium shadow-xs"
                       : "text-slate-400 hover:text-white"
@@ -193,9 +220,59 @@ export function MediaGallery({
               )}
             </div>
           )}
+
+          {/* Fidelity Filter Selector */}
+          {candidates.length > 0 && (
+            <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-white/5 text-[11px]">
+              <span className="text-[10px] text-slate-500 px-1.5 font-mono flex items-center gap-1">
+                <SlidersHorizontal className="h-3 w-3" />
+                <span>Score:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setFidelityFilter("ALL")}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-all cursor-pointer ${
+                  fidelityFilter === "ALL" ? "bg-white/20 text-white font-bold" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                onClick={() => setFidelityFilter("HIGH")}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-all cursor-pointer ${
+                  fidelityFilter === "HIGH" ? "bg-emerald-600 text-white font-bold" : "text-emerald-400/70 hover:text-emerald-300"
+                }`}
+              >
+                ≥80% Alta
+              </button>
+              <button
+                type="button"
+                onClick={() => setFidelityFilter("BROLL")}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-all cursor-pointer ${
+                  fidelityFilter === "BROLL" ? "bg-amber-600 text-white font-bold" : "text-amber-400/70 hover:text-amber-300"
+                }`}
+              >
+                50-79% B-Roll
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
+          {candidates.length > 0 && (
+            <button
+              type="button"
+              onClick={handleRerank}
+              disabled={reranking}
+              className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 border border-white/10 transition-all cursor-pointer"
+              title="Recalcular pontuações de fidelidade semântica com o roteiro atual"
+            >
+              <RefreshCw className={`h-3 w-3 ${reranking ? "animate-spin text-blue-400" : ""}`} />
+              <span>{reranking ? "Reavaliando..." : "Reavaliar"}</span>
+            </button>
+          )}
+
           <select
             value={selectedProvider}
             onChange={(e) => setSelectedProvider(e.target.value)}
@@ -210,7 +287,7 @@ export function MediaGallery({
             type="button"
             onClick={handleSearch}
             disabled={loading || !hasQueries}
-            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             {loading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

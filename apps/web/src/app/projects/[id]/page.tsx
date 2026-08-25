@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Project, Scene, VisualPlanExport } from "@/types";
+import { Project, Scene, VisualPlanExport, ProjectFidelityMetrics } from "@/types";
 import { 
   getProject, 
   listScenes, 
   updateProject, 
-  exportProjectVisualPlan 
+  exportProjectVisualPlan,
+  getProjectFidelityMetrics
 } from "@/lib/api-client";
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { SceneList } from "@/components/SceneList";
@@ -32,6 +33,7 @@ export default function ProjectWorkspacePage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [scenes, setScenes] = useState<Scene[]>([]);
+  const [fidelityMetrics, setFidelityMetrics] = useState<ProjectFidelityMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"SCRIPT" | "SCENES" | "TIMELINE" | "STUDIO">("SCENES");
@@ -44,12 +46,14 @@ export default function ProjectWorkspacePage() {
   useEffect(() => {
     async function load() {
       try {
-        const [projData, scenesData] = await Promise.all([
+        const [projData, scenesData, metricsData] = await Promise.all([
           getProject(projectId),
           listScenes(projectId),
+          getProjectFidelityMetrics(projectId).catch(() => null),
         ]);
         setProject(projData);
         setScenes(scenesData);
+        setFidelityMetrics(metricsData);
       } catch (err: any) {
         setError(err.message || "Erro ao carregar projeto.");
       } finally {
@@ -117,11 +121,28 @@ export default function ProjectWorkspacePage() {
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Painel de Projetos</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-white">{project.name}</h1>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-mono">
               {project.language}
             </span>
+            {fidelityMetrics && fidelityMetrics.scenes_covered > 0 && (
+              <span
+                className={`px-2.5 py-0.5 rounded-full border text-xs font-mono font-bold flex items-center gap-1 shadow-xs ${
+                  fidelityMetrics.average_fidelity >= 80
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    : fidelityMetrics.average_fidelity >= 50
+                    ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                    : "bg-slate-800 text-slate-300 border-slate-700"
+                }`}
+                title={`Fidelidade média do projeto: ${fidelityMetrics.average_fidelity}%. ${fidelityMetrics.high_fidelity_count} cenas com alta fidelidade (≥80%), ${fidelityMetrics.broll_count} com B-Roll.`}
+              >
+                <span>Fidelidade: {fidelityMetrics.average_fidelity}%</span>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  ({fidelityMetrics.scenes_covered}/{fidelityMetrics.total_scenes} cenas)
+                </span>
+              </span>
+            )}
           </div>
         </div>
 
