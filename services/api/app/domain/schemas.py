@@ -1,11 +1,12 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import MediaType, QueryType, RightsStatus
 
+# --- Project Schemas ---
 
 class ProjectBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -32,10 +33,30 @@ class ProjectRead(ProjectBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+# --- Scene Schemas ---
+
 class SceneBase(BaseModel):
     position: int = Field(..., ge=1)
     title: Optional[str] = None
     narration: str
+    visual_intent: Optional[str] = None
+    start_estimate: Optional[float] = None
+    end_estimate: Optional[float] = None
+
+
+class SceneCreate(BaseModel):
+    position: Optional[int] = None
+    title: Optional[str] = None
+    narration: str
+    visual_intent: Optional[str] = None
+    start_estimate: Optional[float] = None
+    end_estimate: Optional[float] = None
+
+
+class SceneUpdate(BaseModel):
+    position: Optional[int] = None
+    title: Optional[str] = None
+    narration: Optional[str] = None
     visual_intent: Optional[str] = None
     start_estimate: Optional[float] = None
     end_estimate: Optional[float] = None
@@ -50,6 +71,25 @@ class SceneRead(SceneBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SceneReorderRequest(BaseModel):
+    scene_ids: List[UUID]
+
+
+class SceneSplitRequest(BaseModel):
+    first_part_narration: str
+    second_part_narration: str
+    first_part_title: Optional[str] = None
+    second_part_title: Optional[str] = None
+    first_part_visual_intent: Optional[str] = None
+    second_part_visual_intent: Optional[str] = None
+
+
+class SceneMergeRequest(BaseModel):
+    target_scene_id: UUID
+
+
+# --- Search Query Schemas ---
+
 class SearchQueryBase(BaseModel):
     query: str
     query_type: QueryType = QueryType.BROLL
@@ -63,6 +103,8 @@ class SearchQueryRead(SearchQueryBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+# --- Media Candidate Schemas ---
 
 class MediaCandidateBase(BaseModel):
     provider: str
@@ -89,6 +131,8 @@ class MediaCandidateRead(MediaCandidateBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+# --- Health Schemas ---
 
 class HealthResponse(BaseModel):
     status: str

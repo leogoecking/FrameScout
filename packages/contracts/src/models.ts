@@ -22,6 +22,24 @@ export interface Project {
   scenes_count?: number;
 }
 
+export interface SceneCreate {
+  position?: number | null;
+  title?: string | null;
+  narration: string;
+  visual_intent?: string | null;
+  start_estimate?: number | null;
+  end_estimate?: number | null;
+}
+
+export interface SceneUpdate {
+  position?: number | null;
+  title?: string | null;
+  narration?: string | null;
+  visual_intent?: string | null;
+  start_estimate?: number | null;
+  end_estimate?: number | null;
+}
+
 export interface Scene {
   id: string;
   project_id: string;
@@ -33,6 +51,23 @@ export interface Scene {
   end_estimate?: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SceneReorderRequest {
+  scene_ids: string[];
+}
+
+export interface SceneSplitRequest {
+  first_part_narration: string;
+  second_part_narration: string;
+  first_part_title?: string | null;
+  second_part_title?: string | null;
+  first_part_visual_intent?: string | null;
+  second_part_visual_intent?: string | null;
+}
+
+export interface SceneMergeRequest {
+  target_scene_id: string;
 }
 
 export interface SearchQuery {

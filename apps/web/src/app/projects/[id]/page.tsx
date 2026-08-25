@@ -3,19 +3,20 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Project, ProjectUpdate } from "@/types";
-import { getProject, updateProject, deleteProject } from "@/lib/api-client";
+import { Project, ProjectUpdate, Scene } from "@/types";
+import { getProject, updateProject, deleteProject, listScenes } from "@/lib/api-client";
 import { ScriptEditor } from "@/components/ScriptEditor";
+import { SceneList } from "@/components/SceneList";
 import { 
   ArrowLeft, 
   Layers, 
   Trash2, 
-  Globe, 
-  Calendar, 
-  Sparkles, 
+  Search, 
+  FileText, 
   Loader2, 
   Check, 
-  AlertCircle 
+  AlertCircle,
+  Sparkles
 } from "lucide-react";
 
 export default function ProjectWorkspacePage() {
@@ -24,8 +25,10 @@ export default function ProjectWorkspacePage() {
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
+  const [scenes, setScenes] = useState<Scene[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"script" | "scenes">("script");
 
   // Edit metadata state
   const [name, setName] = useState("");
@@ -36,11 +39,16 @@ export default function ProjectWorkspacePage() {
   useEffect(() => {
     if (!projectId) return;
 
-    getProject(projectId)
-      .then((data) => {
-        setProject(data);
-        setName(data.name);
-        setLanguage(data.language);
+    Promise.all([getProject(projectId), listScenes(projectId)])
+      .then(([projData, scenesData]) => {
+        setProject(projData);
+        setName(projData.name);
+        setLanguage(projData.language);
+        setScenes(scenesData);
+        // If scenes already exist, open scenes tab directly
+        if (scenesData.length > 0) {
+          setActiveTab("scenes");
+        }
       })
       .catch((err) => setError(err?.message || "Não foi possível carregar o projeto."))
       .finally(() => setLoading(false));
@@ -150,7 +158,7 @@ export default function ProjectWorkspacePage() {
             />
           </div>
 
-          {/* Language & Status */}
+          {/* Language & Save status */}
           <div className="flex items-center gap-4">
             <div className="space-y-1">
               <label className="text-xs uppercase font-semibold text-slate-400 tracking-wider">
@@ -190,26 +198,65 @@ export default function ProjectWorkspacePage() {
             </div>
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 border-t border-white/10 pt-4">
+          <button
+            onClick={() => setActiveTab("script")}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+              activeTab === "script"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                : "bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            <span>1. Roteiro</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("scenes")}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+              activeTab === "scenes"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                : "bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            <span>2. Quadro de Cenas</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[10px] font-mono">
+              {scenes.length}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Main Workspace Area: Script Editor */}
+      {/* Tab Content */}
       <div className="space-y-6">
-        <ScriptEditor
-          initialScript={project.script_raw || ""}
-          onSave={handleSaveScript}
-        />
+        {activeTab === "script" ? (
+          <ScriptEditor
+            initialScript={project.script_raw || ""}
+            onSave={handleSaveScript}
+          />
+        ) : (
+          <SceneList
+            projectId={project.id}
+            hasScript={Boolean(project.script_raw && project.script_raw.trim())}
+            initialScenes={scenes}
+            onScenesUpdated={(updatedScenes) => setScenes(updatedScenes)}
+          />
+        )}
       </div>
 
-      {/* Next Step / Roadmap Teaser */}
+      {/* Next Step Teaser: Sprint 3 */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-slate-900/40 border border-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
-            <Layers className="h-5 w-5" />
+            <Search className="h-5 w-5" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white">Próxima Etapa: Segmentação em Cenas</h4>
+            <h4 className="text-sm font-semibold text-white">Próxima Etapa: Gerador de Queries (Sprint 3)</h4>
             <p className="text-xs text-slate-400 mt-0.5">
-              No Sprint 2, este roteiro será transformado em uma sequência de cenas com intenções visuais.
+              Transformar cada cena em buscas específicas categorizadas por fidelidade, fontes oficiais e B-roll.
             </p>
           </div>
         </div>
@@ -218,7 +265,7 @@ export default function ProjectWorkspacePage() {
           disabled
           className="px-4 py-2 rounded-xl bg-slate-800 text-slate-500 text-xs font-medium cursor-not-allowed border border-white/5"
         >
-          Dividir em Cenas (Sprint 2)
+          Gerar Queries (Sprint 3)
         </button>
       </div>
     </div>
