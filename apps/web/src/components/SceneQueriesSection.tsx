@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SearchQuery, SearchQueryCreate, SearchQueryUpdate } from "@/types";
 import { 
   createQuery, 
@@ -28,6 +28,11 @@ export function SceneQueriesSection({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [queryToEdit, setQueryToEdit] = useState<SearchQuery | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Synchronize when parent updates initialQueries (e.g. batch generation)
+  useEffect(() => {
+    setQueries(initialQueries);
+  }, [initialQueries]);
 
   const notify = (newQueries: SearchQuery[]) => {
     setQueries(newQueries);

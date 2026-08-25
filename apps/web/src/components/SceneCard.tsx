@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Scene, SceneUpdate, SearchQuery } from "@/types";
 import { SceneQueriesSection } from "@/components/SceneQueriesSection";
 import { 
@@ -45,6 +45,13 @@ export function SceneCard({
   const [visualIntent, setVisualIntent] = useState(scene.visual_intent || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(true);
+
+  // Synchronize when scene prop updates
+  useEffect(() => {
+    setTitle(scene.title || `Cena ${scene.position}`);
+    setNarration(scene.narration);
+    setVisualIntent(scene.visual_intent || "");
+  }, [scene.title, scene.narration, scene.visual_intent, scene.position]);
 
   const formatSeconds = (sec: number | null | undefined) => {
     if (sec === null || sec === undefined) return "00:00";
