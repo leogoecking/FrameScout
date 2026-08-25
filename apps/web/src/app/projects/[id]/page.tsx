@@ -13,6 +13,7 @@ import {
 import { ScriptEditor } from "@/components/ScriptEditor";
 import { SceneList } from "@/components/SceneList";
 import { VisualTimeline } from "@/components/VisualTimeline";
+import { VideoStudioPlayer } from "@/components/VideoStudioPlayer";
 import { VisualPlanExportModal } from "@/components/VisualPlanExportModal";
 import { 
   ArrowLeft, 
@@ -21,7 +22,8 @@ import {
   Film, 
   Download, 
   Loader2, 
-  AlertCircle 
+  AlertCircle,
+  Play
 } from "lucide-react";
 
 export default function ProjectWorkspacePage() {
@@ -32,7 +34,7 @@ export default function ProjectWorkspacePage() {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"SCRIPT" | "SCENES" | "TIMELINE">("SCENES");
+  const [activeTab, setActiveTab] = useState<"SCRIPT" | "SCENES" | "TIMELINE" | "STUDIO">("SCENES");
 
   // Export Modal state
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -126,16 +128,25 @@ export default function ProjectWorkspacePage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={() => setActiveTab("STUDIO")}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+          >
+            <Play className="h-3.5 w-3.5 fill-white" />
+            <span>Studio de Vídeo</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleOpenExportModal}
             disabled={exportLoading}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 font-semibold text-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
           >
             {exportLoading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Download className="h-3.5 w-3.5" />
             )}
-            <span>Exportar Plano Visual</span>
+            <span>Exportar Plano</span>
           </button>
         </div>
       </div>
@@ -145,7 +156,7 @@ export default function ProjectWorkspacePage() {
         <button
           type="button"
           onClick={() => setActiveTab("SCRIPT")}
-          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             activeTab === "SCRIPT"
               ? "border-blue-500 text-white"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -158,7 +169,7 @@ export default function ProjectWorkspacePage() {
         <button
           type="button"
           onClick={() => setActiveTab("SCENES")}
-          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             activeTab === "SCENES"
               ? "border-blue-500 text-white"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -174,7 +185,7 @@ export default function ProjectWorkspacePage() {
         <button
           type="button"
           onClick={() => setActiveTab("TIMELINE")}
-          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             activeTab === "TIMELINE"
               ? "border-blue-500 text-white"
               : "border-transparent text-slate-400 hover:text-slate-200"
@@ -182,6 +193,19 @@ export default function ProjectWorkspacePage() {
         >
           <Film className="h-4 w-4" />
           <span>3. Linha do Tempo Visual</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("STUDIO")}
+          className={`px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+            activeTab === "STUDIO"
+              ? "border-emerald-500 text-white bg-emerald-500/5 rounded-t-lg"
+              : "border-transparent text-emerald-400 hover:text-emerald-300"
+          }`}
+        >
+          <Play className="h-3.5 w-3.5 fill-current" />
+          <span>4. Studio de Vídeo (.MP4)</span>
         </button>
       </div>
 
@@ -220,6 +244,16 @@ export default function ProjectWorkspacePage() {
             projectId={project.id}
             onNavigateToScenes={() => setActiveTab("SCENES")}
             onOpenExportModal={handleOpenExportModal}
+          />
+        </div>
+      )}
+
+      {activeTab === "STUDIO" && (
+        <div className="space-y-6">
+          <VideoStudioPlayer
+            projectId={project.id}
+            projectName={project.name}
+            totalScenes={scenes.length}
           />
         </div>
       )}

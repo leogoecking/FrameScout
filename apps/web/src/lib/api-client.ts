@@ -14,7 +14,7 @@ import {
   SelectedAsset,
   SelectedAssetCreate,
   SelectedAssetUpdate,
-  VisualPlanExport
+  VisualPlanExport, RenderJob, RenderJobCreate, VoiceOption
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -433,4 +433,59 @@ export async function exportProjectVisualPlan(projectId: string): Promise<Visual
     throw new Error(msg);
   }
   return await res.json();
+}
+
+// --- Video Rendering Engine (Studio) ---
+
+export async function listAvailableVoices(): Promise<VoiceOption[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/voices`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to list voices: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function triggerRenderJob(
+  projectId: string,
+  data: RenderJobCreate = {}
+): Promise<RenderJob> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/render`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to trigger render: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function listProjectRenderJobs(projectId: string): Promise<RenderJob[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/render-jobs`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to list render jobs: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function getRenderJob(jobId: string): Promise<RenderJob> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/render-jobs/${jobId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to get render job: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export function getRenderVideoStreamUrl(jobId: string): string {
+  return `${API_BASE_URL}/api/v1/render-jobs/${jobId}/stream`;
 }

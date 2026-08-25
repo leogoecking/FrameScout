@@ -1,13 +1,37 @@
 export type RightsStatus = 
-  | "SAFE_REUSE" 
-  | "ATTRIBUTION_REQUIRED" 
-  | "REVIEW_REQUIRED" 
-  | "REFERENCE_ONLY" 
-  | "BLOCKED";
+  | 'SAFE_REUSE'
+  | 'ATTRIBUTION_REQUIRED'
+  | 'REVIEW_REQUIRED'
+  | 'REFERENCE_ONLY'
+  | 'BLOCKED';
 
-export type MediaType = "IMAGE" | "VIDEO";
+export type MediaType = 'IMAGE' | 'VIDEO' | 'AUDIO';
 
-export type QueryType = "EVENT" | "OFFICIAL" | "BROLL" | "CONCEPT" | "COMPANY" | "PERSON" | "LOCATION";
+export type QueryType = 
+  | 'OFFICIAL'
+  | 'EVENT'
+  | 'COMPANY'
+  | 'PERSON'
+  | 'LOCATION'
+  | 'CONCEPT'
+  | 'BROLL';
+
+export type RenderStatus = 
+  | 'PENDING'
+  | 'SYNTHESIZING_AUDIO'
+  | 'PROCESSING_MEDIA'
+  | 'RENDERING_VIDEO'
+  | 'COMPLETED'
+  | 'FAILED';
+
+export interface HealthData {
+  status: string;
+  service: string;
+  environment: string;
+  version: string;
+  database: string;
+  timestamp: string;
+}
 
 export interface Project {
   id: string;
@@ -162,11 +186,30 @@ export interface VisualPlanExport {
   markdown_document: string;
 }
 
-export interface HealthData {
-  status: string;
-  service: string;
-  environment: string;
-  version: string;
-  database: string;
-  timestamp: string;
+export interface RenderJob {
+  id: string;
+  project_id: string;
+  status: RenderStatus;
+  progress: number;
+  aspect_ratio: string;
+  voice: string;
+  include_subtitles: boolean;
+  include_credits_card: boolean;
+  video_url?: string | null;
+  duration_seconds?: number | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RenderJobCreate {
+  aspect_ratio?: string;
+  voice?: string;
+  include_subtitles?: boolean;
+  include_credits_card?: boolean;
+}
+
+export interface VoiceOption {
+  id: string;
+  name: string;
 }

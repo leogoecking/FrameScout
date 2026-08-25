@@ -27,3 +27,17 @@ class QueryType(str, enum.Enum):
     LOCATION = "LOCATION"
     CONCEPT = "CONCEPT"
     BROLL = "BROLL"
+
+
+class RenderStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    SYNTHESIZING_AUDIO = "SYNTHESIZING_AUDIO"
+    PROCESSING_MEDIA = "PROCESSING_MEDIA"
+    RENDERING_VIDEO = "RENDERING_VIDEO"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class AspectRatio(str, enum.Enum):
+    LANDSCAPE_16_9 = "16:9"
+    PORTRAIT_9_16 = "9:16"

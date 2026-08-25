@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.domain.enums import MediaType, QueryType, RightsStatus
+from app.domain.enums import MediaType, QueryType, RenderStatus, RightsStatus
 
 # --- Project Schemas ---
 
@@ -230,6 +230,34 @@ class VisualPlanExport(BaseModel):
     scenes: List[SceneVisualPlanItem]
     consolidated_attributions: List[str]
     markdown_document: str
+
+
+# --- Render Job Schemas ---
+
+
+class RenderJobCreate(BaseModel):
+    aspect_ratio: Optional[str] = "16:9"
+    voice: Optional[str] = "pt-BR-AntonioNeural"
+    include_subtitles: Optional[bool] = True
+    include_credits_card: Optional[bool] = True
+
+
+class RenderJobRead(BaseModel):
+    id: UUID
+    project_id: UUID
+    status: RenderStatus
+    progress: int
+    aspect_ratio: str
+    voice: str
+    include_subtitles: bool
+    include_credits_card: bool
+    video_url: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Health Schemas ---

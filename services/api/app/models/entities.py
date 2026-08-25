@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -18,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.domain.enums import MediaType, RightsStatus
+from app.domain.enums import MediaType, RenderStatus, RightsStatus
 
 
 def utc_now() -> datetime:
@@ -47,6 +48,12 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
         order_by="Scene.position",
+    )
+    render_jobs: Mapped[List["RenderJob"]] = relationship(
+        "RenderJob",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="RenderJob.created_at.desc()",
     )
 
 
@@ -176,3 +183,34 @@ class SelectedAsset(Base):
     media_candidate: Mapped["MediaCandidate"] = relationship(
         "MediaCandidate", back_populates="selected_assets"
     )
+
+
+class RenderJob(Base):
+    __tablename__ = "render_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[RenderStatus] = mapped_column(
+        SQLEnum(RenderStatus), default=RenderStatus.PENDING, nullable=False
+    )
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    aspect_ratio: Mapped[str] = mapped_column(String(10), default="16:9", nullable=False)
+    voice: Mapped[str] = mapped_column(String(50), default="pt-BR-AntonioNeural", nullable=False)
+    include_subtitles: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    include_credits_card: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    video_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+
+    # Relationships
+    project: Mapped["Project"] = relationship("Project", back_populates="render_jobs")
