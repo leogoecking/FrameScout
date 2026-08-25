@@ -76,9 +76,7 @@ class QueryService:
             raise ValueError("Projeto não encontrado")
 
         scenes_query = (
-            select(Scene)
-            .where(Scene.project_id == project_id)
-            .order_by(Scene.position.asc())
+            select(Scene).where(Scene.project_id == project_id).order_by(Scene.position.asc())
         )
         scenes_res = await db.execute(scenes_query)
         scenes = list(scenes_res.scalars().all())
@@ -88,17 +86,13 @@ class QueryService:
 
         total_queries = 0
         for scene in scenes:
-            queries = await QueryService.generate_for_scene(
-                db, scene.id, overwrite=overwrite
-            )
+            queries = await QueryService.generate_for_scene(db, scene.id, overwrite=overwrite)
             total_queries += len(queries)
 
         return {"scenes_count": len(scenes), "total_queries_created": total_queries}
 
     @staticmethod
-    async def create(
-        db: AsyncSession, scene_id: UUID, obj_in: SearchQueryCreate
-    ) -> SearchQuery:
+    async def create(db: AsyncSession, scene_id: UUID, obj_in: SearchQueryCreate) -> SearchQuery:
         scene_query = select(Scene).where(Scene.id == scene_id)
         scene_res = await db.execute(scene_query)
         scene = scene_res.scalar_one_or_none()

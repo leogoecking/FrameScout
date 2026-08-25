@@ -28,9 +28,7 @@ class PexelsProvider(MediaProvider):
     def name(self) -> str:
         return "pexels"
 
-    async def search(
-        self, query: SearchQueryBase, limit: int = 10
-    ) -> List[MediaCandidateBase]:
+    async def search(self, query: SearchQueryBase, limit: int = 10) -> List[MediaCandidateBase]:
         # Se não houver chave de API configurada, utiliza o sandbox determinístico
         if not self.api_key or self.api_key.strip() in ["", "mock", "test"]:
             return self._generate_sandbox_candidates(query, limit)
@@ -44,9 +42,7 @@ class PexelsProvider(MediaProvider):
             )
             return self._generate_sandbox_candidates(query, limit)
 
-    async def _search_remote(
-        self, query: SearchQueryBase, limit: int
-    ) -> List[MediaCandidateBase]:
+    async def _search_remote(self, query: SearchQueryBase, limit: int) -> List[MediaCandidateBase]:
         headers = {"Authorization": self.api_key}
         candidates: List[MediaCandidateBase] = []
         half_limit = max(1, limit // 2)
@@ -76,9 +72,7 @@ class PexelsProvider(MediaProvider):
 
         return candidates[:limit]
 
-    def _map_photo_to_candidate(
-        self, photo: Dict[str, Any], query_term: str
-    ) -> MediaCandidateBase:
+    def _map_photo_to_candidate(self, photo: Dict[str, Any], query_term: str) -> MediaCandidateBase:
         photographer = photo.get("photographer", "Pexels Creator")
         src = photo.get("src", {})
         photo_id = str(photo.get("id"))
@@ -106,9 +100,7 @@ class PexelsProvider(MediaProvider):
             },
         )
 
-    def _map_video_to_candidate(
-        self, video: Dict[str, Any], query_term: str
-    ) -> MediaCandidateBase:
+    def _map_video_to_candidate(self, video: Dict[str, Any], query_term: str) -> MediaCandidateBase:
         user_info = video.get("user", {})
         author = user_info.get("name", "Pexels Filmmaker")
         video_id = str(video.get("id"))

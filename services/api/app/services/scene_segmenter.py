@@ -78,20 +78,24 @@ class ScriptSegmenter:
                     title = f"Cena {int(header_num):02d}: {lines[0]}"
                     narration = "\n".join(lines[1:]).strip()
 
-                scenes_data.append({
-                    "title": title,
-                    "narration": narration,
-                })
+                scenes_data.append(
+                    {
+                        "title": title,
+                        "narration": narration,
+                    }
+                )
         else:
             # 2. Fallback: Divisão por blocos de parágrafos
             paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
 
             if len(paragraphs) > 1:
                 for idx, paragraph in enumerate(paragraphs, start=1):
-                    scenes_data.append({
-                        "title": f"Cena {idx:02d}",
-                        "narration": paragraph,
-                    })
+                    scenes_data.append(
+                        {
+                            "title": f"Cena {idx:02d}",
+                            "narration": paragraph,
+                        }
+                    )
             else:
                 # 3. Fallback: Se for um bloco único longo, dividir a cada ~30 palavras
                 sentences = re.split(r"(?<=[.!?])\s+", text)
@@ -102,18 +106,22 @@ class ScriptSegmenter:
                     current_chunk.append(sentence)
                     word_count = sum(len(s.split()) for s in current_chunk)
                     if word_count >= 30:
-                        scenes_data.append({
-                            "title": f"Cena {scene_counter:02d}",
-                            "narration": " ".join(current_chunk),
-                        })
+                        scenes_data.append(
+                            {
+                                "title": f"Cena {scene_counter:02d}",
+                                "narration": " ".join(current_chunk),
+                            }
+                        )
                         current_chunk = []
                         scene_counter += 1
 
                 if current_chunk:
-                    scenes_data.append({
-                        "title": f"Cena {scene_counter:02d}",
-                        "narration": " ".join(current_chunk),
-                    })
+                    scenes_data.append(
+                        {
+                            "title": f"Cena {scene_counter:02d}",
+                            "narration": " ".join(current_chunk),
+                        }
+                    )
 
         # Construir objetos SceneCreate com timeline contínua
         results: List[SceneCreate] = []

@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://framescout:framescout_dev_password@localhost:5432/framescout_db"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://framescout:framescout_dev_password@localhost:5432/framescout_db"
+    )
 
     # CORS
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]

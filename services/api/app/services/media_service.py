@@ -27,9 +27,7 @@ class MediaService:
         return res.scalar_one_or_none()
 
     @staticmethod
-    async def list_by_query(
-        db: AsyncSession, search_query_id: UUID
-    ) -> List[MediaCandidate]:
+    async def list_by_query(db: AsyncSession, search_query_id: UUID) -> List[MediaCandidate]:
         query = (
             select(MediaCandidate)
             .where(MediaCandidate.search_query_id == search_query_id)
@@ -39,9 +37,7 @@ class MediaService:
         return list(res.scalars().all())
 
     @staticmethod
-    async def list_by_scene(
-        db: AsyncSession, scene_id: UUID
-    ) -> List[MediaCandidate]:
+    async def list_by_scene(db: AsyncSession, scene_id: UUID) -> List[MediaCandidate]:
         # Busca todos os candidatos vinculados a quaisquer queries da cena
         query = (
             select(MediaCandidate)
@@ -70,9 +66,7 @@ class MediaService:
         limit: int = 8,
         overwrite: bool = True,
     ) -> List[MediaCandidate]:
-        sq_res = await db.execute(
-            select(SearchQuery).where(SearchQuery.id == search_query_id)
-        )
+        sq_res = await db.execute(select(SearchQuery).where(SearchQuery.id == search_query_id))
         search_query = sq_res.scalar_one_or_none()
         if not search_query:
             raise KeyError("Query de busca não encontrada")

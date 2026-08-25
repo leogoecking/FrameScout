@@ -28,9 +28,7 @@ async def test_generate_queries_for_scene_gta_example(async_client):
 
     types = [q["query_type"] for q in queries]
     assert QueryType.EVENT.value in types
-    assert (
-        QueryType.OFFICIAL.value in types or QueryType.COMPANY.value in types
-    )
+    assert QueryType.OFFICIAL.value in types or QueryType.COMPANY.value in types
     assert QueryType.BROLL.value in types
 
     all_query_strings = " ".join(q["query"] for q in queries)
@@ -79,9 +77,7 @@ async def test_batch_generate_project_queries(async_client):
 
     await async_client.post(f"/api/v1/projects/{project_id}/scenes/generate")
 
-    batch_res = await async_client.post(
-        f"/api/v1/projects/{project_id}/queries/generate"
-    )
+    batch_res = await async_client.post(f"/api/v1/projects/{project_id}/queries/generate")
     assert batch_res.status_code == 201
     data = batch_res.json()
     assert data["scenes_count"] == 2
@@ -127,10 +123,7 @@ async def test_crud_manual_search_queries(async_client):
         json={"query": "datacenter server rack flashing lights", "priority": 2},
     )
     assert update_res.status_code == 200
-    assert (
-        update_res.json()["query"]
-        == "datacenter server rack flashing lights"
-    )
+    assert update_res.json()["query"] == "datacenter server rack flashing lights"
     assert update_res.json()["priority"] == 2
 
     # Delete query

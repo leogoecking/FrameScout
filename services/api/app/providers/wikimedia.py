@@ -68,8 +68,7 @@ def derive_rights_status(
 
     # 3. Creative Commons com Atribuição Comercial Livre (CC-BY, CC-BY-SA, GFDL)
     if any(
-        term in lic_lower
-        for term in ["cc-by", "cc by", "cc_by", "attribution", "gfdl", "gnu fdl"]
+        term in lic_lower for term in ["cc-by", "cc by", "cc_by", "attribution", "gfdl", "gnu fdl"]
     ):
         norm_lic = raw_lic if raw_lic else "Creative Commons Attribution"
         author_str = clean_html_tags(credit_text or "Autor Desconhecido")
@@ -96,9 +95,7 @@ class WikimediaProvider(MediaProvider):
     def name(self) -> str:
         return "wikimedia"
 
-    async def search(
-        self, query: SearchQueryBase, limit: int = 10
-    ) -> List[MediaCandidateBase]:
+    async def search(self, query: SearchQueryBase, limit: int = 10) -> List[MediaCandidateBase]:
         try:
             return await self._search_remote(query, limit)
         except Exception as exc:
@@ -108,9 +105,7 @@ class WikimediaProvider(MediaProvider):
             )
             return self._generate_sandbox_candidates(query, limit)
 
-    async def _search_remote(
-        self, query: SearchQueryBase, limit: int
-    ) -> List[MediaCandidateBase]:
+    async def _search_remote(self, query: SearchQueryBase, limit: int) -> List[MediaCandidateBase]:
         params = {
             "action": "query",
             "generator": "search",

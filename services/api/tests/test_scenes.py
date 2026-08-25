@@ -109,15 +109,19 @@ async def test_reorder_scenes(async_client):
     )
     project_id = proj_res.json()["id"]
 
-    s1 = (await async_client.post(
-        f"/api/v1/projects/{project_id}/scenes",
-        json={"title": "Cena 1", "narration": "Primeira"},
-    )).json()
+    s1 = (
+        await async_client.post(
+            f"/api/v1/projects/{project_id}/scenes",
+            json={"title": "Cena 1", "narration": "Primeira"},
+        )
+    ).json()
 
-    s2 = (await async_client.post(
-        f"/api/v1/projects/{project_id}/scenes",
-        json={"title": "Cena 2", "narration": "Segunda"},
-    )).json()
+    s2 = (
+        await async_client.post(
+            f"/api/v1/projects/{project_id}/scenes",
+            json={"title": "Cena 2", "narration": "Segunda"},
+        )
+    ).json()
 
     # Reorder s2, s1
     reorder_res = await async_client.put(
@@ -140,10 +144,12 @@ async def test_split_and_merge_scenes(async_client):
     )
     project_id = proj_res.json()["id"]
 
-    scene = (await async_client.post(
-        f"/api/v1/projects/{project_id}/scenes",
-        json={"title": "Cena Longa", "narration": "Parte 1 do texto. Parte 2 do texto."},
-    )).json()
+    scene = (
+        await async_client.post(
+            f"/api/v1/projects/{project_id}/scenes",
+            json={"title": "Cena Longa", "narration": "Parte 1 do texto. Parte 2 do texto."},
+        )
+    ).json()
     scene_id = scene["id"]
 
     # Split

@@ -16,9 +16,7 @@ from app.models.entities import Project, Scene, SelectedAsset
 
 class VisualPlanService:
     @staticmethod
-    async def generate_visual_plan(
-        db: AsyncSession, project_id: UUID
-    ) -> VisualPlanExport:
+    async def generate_visual_plan(db: AsyncSession, project_id: UUID) -> VisualPlanExport:
         # Carregar projeto com cenas e assets selecionados completos
         query = (
             select(Project)

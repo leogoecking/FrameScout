@@ -11,9 +11,7 @@ from app.models.entities import MediaCandidate, Scene, SelectedAsset
 
 class AssetService:
     @staticmethod
-    async def get(
-        db: AsyncSession, selected_asset_id: UUID
-    ) -> Optional[SelectedAsset]:
+    async def get(db: AsyncSession, selected_asset_id: UUID) -> Optional[SelectedAsset]:
         query = (
             select(SelectedAsset)
             .options(selectinload(SelectedAsset.media_candidate))
@@ -23,9 +21,7 @@ class AssetService:
         return res.scalar_one_or_none()
 
     @staticmethod
-    async def list_by_scene(
-        db: AsyncSession, scene_id: UUID
-    ) -> List[SelectedAsset]:
+    async def list_by_scene(db: AsyncSession, scene_id: UUID) -> List[SelectedAsset]:
         query = (
             select(SelectedAsset)
             .options(selectinload(SelectedAsset.media_candidate))
@@ -54,9 +50,7 @@ class AssetService:
             raise KeyError("Candidato de mídia não encontrado")
 
         # 3. Remover seleção anterior para a mesma cena se já existir (para curadoria direta 1:1)
-        await db.execute(
-            delete(SelectedAsset).where(SelectedAsset.scene_id == scene_id)
-        )
+        await db.execute(delete(SelectedAsset).where(SelectedAsset.scene_id == scene_id))
 
         # 4. Criar o asset selecionado
         selected = SelectedAsset(
@@ -91,9 +85,7 @@ class AssetService:
         return await AssetService.get(db, selected_asset_id)  # type: ignore[return-value]
 
     @staticmethod
-    async def remove_selected_asset(
-        db: AsyncSession, selected_asset_id: UUID
-    ) -> None:
+    async def remove_selected_asset(db: AsyncSession, selected_asset_id: UUID) -> None:
         selected = await AssetService.get(db, selected_asset_id)
         if not selected:
             raise KeyError("Asset selecionado não encontrado")

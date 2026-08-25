@@ -72,3 +72,9 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Media and Renders
+media_storage/
+services/api/media_storage/
+*.mp4
+*.mp3

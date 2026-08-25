@@ -22,10 +22,7 @@ SUPPORTED_VOICES: Dict[str, str] = {
 class TTSEngine:
     @staticmethod
     def list_voices() -> List[Dict[str, str]]:
-        return [
-            {"id": voice_id, "name": label}
-            for voice_id, label in SUPPORTED_VOICES.items()
-        ]
+        return [{"id": voice_id, "name": label} for voice_id, label in SUPPORTED_VOICES.items()]
 
     @staticmethod
     async def synthesize(
@@ -55,9 +52,7 @@ class TTSEngine:
                 return duration
             return TTSEngine._generate_fallback_audio(clean_text, str(out_p))
         except Exception as exc:
-            logger.warning(
-                f"Edge-TTS indisponível ({exc}). Gerando áudio de contingência."
-            )
+            logger.warning(f"Edge-TTS indisponível ({exc}). Gerando áudio de contingência.")
             return TTSEngine._generate_fallback_audio(clean_text, str(out_p))
 
     @staticmethod

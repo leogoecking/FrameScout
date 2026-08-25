@@ -19,6 +19,7 @@ DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 # --- Scene-Scoped Query Endpoints ---
 
+
 @router.post(
     "/scenes/{scene_id}/queries/generate",
     response_model=List[SearchQueryRead],
@@ -93,6 +94,7 @@ async def create_scene_query(
 
 
 # --- Individual Query Endpoints ---
+
 
 @router.get(
     "/queries/{query_id}",

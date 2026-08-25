@@ -47,11 +47,7 @@ class SceneService:
 
     @staticmethod
     async def get(db: AsyncSession, scene_id: UUID) -> Optional[Scene]:
-        query = (
-            select(Scene)
-            .options(selectinload(Scene.queries))
-            .where(Scene.id == scene_id)
-        )
+        query = select(Scene).options(selectinload(Scene.queries)).where(Scene.id == scene_id)
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
@@ -97,9 +93,7 @@ class SceneService:
         return created_scenes
 
     @staticmethod
-    async def create(
-        db: AsyncSession, project_id: UUID, obj_in: SceneCreate
-    ) -> Scene:
+    async def create(db: AsyncSession, project_id: UUID, obj_in: SceneCreate) -> Scene:
         existing = await SceneService.list_by_project(db, project_id)
         pos = len(existing) + 1 if obj_in.position is None else obj_in.position
 
@@ -130,9 +124,7 @@ class SceneService:
         return scene
 
     @staticmethod
-    async def update(
-        db: AsyncSession, scene: Scene, obj_in: SceneUpdate
-    ) -> Scene:
+    async def update(db: AsyncSession, scene: Scene, obj_in: SceneUpdate) -> Scene:
         if obj_in.title is not None:
             scene.title = obj_in.title
         if obj_in.narration is not None:
@@ -169,9 +161,7 @@ class SceneService:
         await db.commit()
 
     @staticmethod
-    async def reorder(
-        db: AsyncSession, project_id: UUID, scene_ids: List[UUID]
-    ) -> List[Scene]:
+    async def reorder(db: AsyncSession, project_id: UUID, scene_ids: List[UUID]) -> List[Scene]:
         scenes = await SceneService.list_by_project(db, project_id)
         scene_map = {sc.id: sc for sc in scenes}
 
@@ -185,9 +175,7 @@ class SceneService:
         return reordered
 
     @staticmethod
-    async def split(
-        db: AsyncSession, scene: Scene, split_data: SceneSplitRequest
-    ) -> List[Scene]:
+    async def split(db: AsyncSession, scene: Scene, split_data: SceneSplitRequest) -> List[Scene]:
         project_id = scene.project_id
         orig_pos = scene.position
 
@@ -205,9 +193,8 @@ class SceneService:
                 sc.position += 1
 
         # Part 2: Create new second scene
-        intent2 = (
-            split_data.second_part_visual_intent
-            or infer_visual_intent(split_data.second_part_narration)
+        intent2 = split_data.second_part_visual_intent or infer_visual_intent(
+            split_data.second_part_narration
         )
 
         new_scene = Scene(
@@ -233,9 +220,7 @@ class SceneService:
         return [scene, new_scene]
 
     @staticmethod
-    async def merge(
-        db: AsyncSession, scene1: Scene, req: SceneMergeRequest
-    ) -> Scene:
+    async def merge(db: AsyncSession, scene1: Scene, req: SceneMergeRequest) -> Scene:
         if scene1.id == req.target_scene_id:
             raise ValueError("Não é possível unir uma cena consigo mesma.")
 

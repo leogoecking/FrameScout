@@ -37,17 +37,13 @@ class ProjectService:
     @staticmethod
     async def get(db: AsyncSession, project_id: UUID) -> Optional[Project]:
         query = (
-            select(Project)
-            .options(selectinload(Project.scenes))
-            .where(Project.id == project_id)
+            select(Project).options(selectinload(Project.scenes)).where(Project.id == project_id)
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def update(
-        db: AsyncSession, project: Project, obj_in: ProjectUpdate
-    ) -> Project:
+    async def update(db: AsyncSession, project: Project, obj_in: ProjectUpdate) -> Project:
         if obj_in.name is not None:
             project.name = obj_in.name
         if obj_in.language is not None:

@@ -15,11 +15,25 @@ from app.domain.enums import RenderStatus
 from app.domain.schemas import RenderJobCreate
 from app.engine.tts_engine import TTSEngine
 from app.engine.video_composer import VideoComposer
-from app.models.entities import Project, RenderJob, Scene, SelectedAsset
+from app.models.entities import (
+    MediaCandidate,
+    Project,
+    RenderJob,
+    Scene,
+    SearchQuery,
+    SelectedAsset,
+)
 
 logger = logging.getLogger("framescout.services.render")
 
 STORAGE_BASE_DIR = os.getenv("STORAGE_LOCAL_DIR", "./media_storage")
+HTTP_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36 FrameScoutBot/1.0"
+    )
+}
 
 
 class RenderService:
@@ -40,9 +54,7 @@ class RenderService:
         return res.scalar_one_or_none()
 
     @staticmethod
-    async def list_by_project(
-        db: AsyncSession, project_id: UUID
-    ) -> List[RenderJob]:
+    async def list_by_project(db: AsyncSession, project_id: UUID) -> List[RenderJob]:
         query = (
             select(RenderJob)
             .where(RenderJob.project_id == project_id)
@@ -52,9 +64,7 @@ class RenderService:
         return list(res.scalars().all())
 
     @staticmethod
-    async def create_job(
-        db: AsyncSession, project_id: UUID, data: RenderJobCreate
-    ) -> RenderJob:
+    async def create_job(db: AsyncSession, project_id: UUID, data: RenderJobCreate) -> RenderJob:
         proj_res = await db.execute(select(Project).where(Project.id == project_id))
         project = proj_res.scalar_one_or_none()
         if not project:
@@ -78,6 +88,16 @@ class RenderService:
         return job
 
     @staticmethod
+    def _sanitize_media_url(url: str) -> str:
+        """Ajusta URLs de thumbnails de provedores que exigem dimensões específicas."""
+        if not url:
+            return ""
+        # Wikimedia commons: converter 800px para 960px caso presente em thumbnails
+        if "upload.wikimedia.org" in url and "/800px-" in url:
+            return url.replace("/800px-", "/960px-")
+        return url
+
+    @staticmethod
     async def execute_render_pipeline(
         job_id: UUID,
         project_id: UUID,
@@ -93,13 +113,16 @@ class RenderService:
                 if not job:
                     return
 
-                # 1. Carregar projeto com cenas e assets selecionados
+                # 1. Carregar projeto com cenas, queries, assets selecionados e candidatos
                 proj_res = await db.execute(
                     select(Project)
                     .options(
                         selectinload(Project.scenes)
                         .selectinload(Scene.selected_assets)
-                        .selectinload(SelectedAsset.media_candidate)
+                        .selectinload(SelectedAsset.media_candidate),
+                        selectinload(Project.scenes)
+                        .selectinload(Scene.queries)
+                        .selectinload(SearchQuery.media_candidates),
                     )
                     .where(Project.id == project_id)
                 )
@@ -136,40 +159,76 @@ class RenderService:
                 scene_clips: List[str] = []
                 attributions_set = set()
 
-                async with httpx.AsyncClient(timeout=30.0) as http_client:
+                async with httpx.AsyncClient(
+                    timeout=30.0, follow_redirects=True, headers=HTTP_HEADERS
+                ) as http_client:
                     for idx, scene in enumerate(project.scenes):
                         audio_path, duration = scene_audios[idx]
                         clip_path = os.path.join(temp_dir, f"scene_{idx:03d}_clip.mp4")
 
-                        media_file_path = os.path.join(temp_dir, f"scene_{idx:03d}_media")
+                        # Prioridade 1: Mídia explicitamente fixada pelo usuário
+                        # Prioridade 2: Auto-seleção do melhor candidato da cena
+                        candidate: Optional[MediaCandidate] = None
                         framing_mode = "FILL"
 
                         if scene.selected_assets and scene.selected_assets[0].media_candidate:
                             sa = scene.selected_assets[0]
-                            mc = sa.media_candidate
+                            candidate = sa.media_candidate
                             framing_mode = sa.framing_mode or "FILL"
+                        else:
+                            # Auto-selecionar o primeiro candidato disponível nas queries da cena
+                            for q in scene.queries:
+                                if q.media_candidates:
+                                    candidate = q.media_candidates[0]
+                                    framing_mode = "PAN_AND_ZOOM"
+                                    break
 
-                            if mc.attribution:
-                                attributions_set.add(mc.attribution)
+                        media_file_path = os.path.join(temp_dir, f"scene_{idx:03d}_media")
+                        has_downloaded_media = False
 
-                            download_url = mc.preview_url or mc.url
+                        if candidate:
+                            if candidate.attribution:
+                                attributions_set.add(candidate.attribution)
+
+                            raw_url = (
+                                candidate.preview_url
+                                or candidate.metadata_json.get("file_url")
+                                or candidate.url
+                            )
+                            download_url = RenderService._sanitize_media_url(raw_url)
+
                             ext = ".jpg"
-                            if mc.media_type.value == "VIDEO" or "video" in download_url.lower():
+                            if (
+                                candidate.media_type.value == "VIDEO"
+                                or "video" in download_url.lower()
+                            ):
                                 ext = ".mp4"
                             elif download_url.lower().endswith(".png"):
                                 ext = ".png"
-                            elif download_url.lower().endswith(".svg"):
-                                ext = ".svg.png"
 
                             media_file_path += ext
 
                             try:
                                 res = await http_client.get(download_url)
-                                if res.status_code == 200:
+                                if res.status_code == 200 and len(res.content) > 500:
                                     with open(media_file_path, "wb") as mf:  # noqa: ASYNC230
                                         mf.write(res.content)
+                                    has_downloaded_media = True
+                                    logger.info(
+                                        f"Mídia baixada para Cena {scene.position} "
+                                        f"({len(res.content)} bytes)"
+                                    )
+                                else:
+                                    logger.warning(
+                                        f"Status {res.status_code} ({len(res.content)}B) "
+                                        f"ao baixar {download_url}"
+                                    )
                             except Exception as dl_err:
                                 logger.warning(f"Falha download {download_url}: {dl_err}")
+
+                        # Se não baixou arquivo válido, limpa o path para fallback
+                        if not has_downloaded_media:
+                            media_file_path = ""
 
                         VideoComposer.render_scene_clip(
                             media_path=media_file_path,

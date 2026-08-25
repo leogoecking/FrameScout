@@ -44,6 +44,7 @@ def _to_scene_read(scene: Scene) -> SceneRead:
 
 # --- Project-Scoped Scene Endpoints ---
 
+
 @router.post(
     "/projects/{project_id}/scenes/generate",
     response_model=List[SceneRead],
@@ -107,6 +108,7 @@ async def reorder_scenes(
 
 
 # --- Individual Scene Endpoints ---
+
 
 @router.get(
     "/scenes/{scene_id}",
