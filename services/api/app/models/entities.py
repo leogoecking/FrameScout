@@ -10,9 +10,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Uuid,
 )
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -27,7 +27,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     language: Mapped[str] = mapped_column(String(10), default="pt-BR", nullable=False)
@@ -52,10 +52,10 @@ class Scene(Base):
     __tablename__ = "scenes"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -84,10 +84,10 @@ class SearchQuery(Base):
     __tablename__ = "search_queries"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     scene_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False
     )
     query: Mapped[str] = mapped_column(String(500), nullable=False)
     query_type: Mapped[QueryType] = mapped_column(
@@ -106,10 +106,10 @@ class MediaCandidate(Base):
     __tablename__ = "media_candidates"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     search_query_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("search_queries.id", ondelete="SET NULL"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("search_queries.id", ondelete="SET NULL"), nullable=True
     )
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     external_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -139,13 +139,13 @@ class SelectedAsset(Base):
     __tablename__ = "selected_assets"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     scene_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False
     )
     media_candidate_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("media_candidates.id", ondelete="CASCADE"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("media_candidates.id", ondelete="CASCADE"), nullable=False
     )
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

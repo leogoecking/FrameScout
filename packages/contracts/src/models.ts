@@ -1,5 +1,17 @@
 import { RightsStatus, MediaType, QueryType } from "./enums";
 
+export interface ProjectCreate {
+  name: string;
+  language?: string;
+  script_raw?: string | null;
+}
+
+export interface ProjectUpdate {
+  name?: string | null;
+  language?: string | null;
+  script_raw?: string | null;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -7,6 +19,7 @@ export interface Project {
   script_raw?: string | null;
   created_at: string;
   updated_at: string;
+  scenes_count?: number;
 }
 
 export interface Scene {

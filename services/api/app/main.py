@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.health import router as health_router
+from app.api.v1.projects import router as projects_router
 from app.core.config import settings
 from app.core.database import Base, engine
 
@@ -44,6 +45,7 @@ def create_application() -> FastAPI:
     # Routers
     app.include_router(health_router)
     app.include_router(health_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(projects_router, prefix=settings.API_V1_PREFIX)
 
     return app
 

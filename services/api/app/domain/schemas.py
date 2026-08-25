@@ -17,10 +17,17 @@ class ProjectCreate(ProjectBase):
     pass
 
 
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    language: Optional[str] = Field(None, max_length=10)
+    script_raw: Optional[str] = None
+
+
 class ProjectRead(ProjectBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    scenes_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

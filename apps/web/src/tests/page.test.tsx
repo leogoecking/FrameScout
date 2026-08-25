@@ -2,7 +2,7 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import HomePage from "@/app/page";
 
-// Mock fetchHealth
+// Mock fetchHealth & listProjects
 vi.mock("@/lib/api-client", () => ({
   fetchHealth: vi.fn().mockResolvedValue({
     status: "ok",
@@ -12,6 +12,8 @@ vi.mock("@/lib/api-client", () => ({
     database: "connected",
     timestamp: "2026-08-24T22:00:00Z",
   }),
+  listProjects: vi.fn().mockResolvedValue([]),
+  deleteProject: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("HomePage", () => {
@@ -19,10 +21,8 @@ describe("HomePage", () => {
     await act(async () => {
       render(<HomePage />);
     });
-    expect(
-      screen.getByText("Do roteiro à mídia certa — com procedência e confiança.")
-    ).toBeInTheDocument();
-    expect(screen.getByText("Status da Infraestrutura (Sprint 0)")).toBeInTheDocument();
+    expect(screen.getByText("Do roteiro à mídia certa.")).toBeInTheDocument();
+    expect(screen.getByText(/Status da Infraestrutura/i)).toBeInTheDocument();
   });
 
   it("displays backend and database connected badges", async () => {

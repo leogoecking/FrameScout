@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HealthData } from "@/types";
-import { fetchHealth } from "@/lib/api-client";
+import { HealthData, Project } from "@/types";
+import { fetchHealth, listProjects, deleteProject } from "@/lib/api-client";
+import { ProjectCard } from "@/components/ProjectCard";
+import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -13,18 +15,52 @@ import {
   Server, 
   Database, 
   Cpu, 
-  FileText 
+  FileText,
+  Plus,
+  Film,
+  Sparkles,
+  FolderOpen
 } from "lucide-react";
 
 export default function HomePage() {
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const loadProjects = async () => {
+    setProjectsLoading(true);
+    try {
+      const data = await listProjects();
+      setProjects(data);
+    } catch (err) {
+      console.error("Erro ao carregar projetos:", err);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchHealth()
       .then((data) => setHealth(data))
       .finally(() => setLoading(false));
+
+    loadProjects();
   }, []);
+
+  const handleProjectCreated = (newProject: Project) => {
+    setProjects((prev) => [newProject, ...prev]);
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await deleteProject(id);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      alert("Erro ao excluir projeto.");
+    }
+  };
 
   const pipelineSteps = [
     { title: "1. Roteiro", desc: "Estruturação textual e marcações", icon: FileText },
@@ -37,23 +73,89 @@ export default function HomePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
-      {/* Hero Section */}
-      <div className="space-y-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-          Do roteiro à mídia certa — com procedência e confiança.
-        </h1>
-        <p className="text-lg text-slate-400 max-w-3xl leading-relaxed">
-          FrameScout analisa roteiros de vídeo, divide em cenas, gera queries inteligentes e busca mídias
-          classificadas rigorosamente por fidelidade e direitos de reutilização.
-        </p>
+      {/* Hero & Quick Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Sprint 1 — Projects & Scripts</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            Do roteiro à mídia certa.
+          </h1>
+          <p className="text-base text-slate-400 max-w-2xl leading-relaxed">
+            Crie projetos, cole roteiros, divida em cenas e descubra mídias com classificação jurídica
+            e de fidelidade factual rigorosa.
+          </p>
+        </div>
+
+        <div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm flex items-center gap-2 shadow-xl shadow-blue-600/25 hover:scale-105 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Novo Projeto</span>
+          </button>
+        </div>
       </div>
 
-      {/* System Status Dashboard (Sprint 0 Foundation) */}
+      {/* Projects Section */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Film className="h-5 w-5 text-blue-400" />
+            <h2 className="text-xl font-bold text-white tracking-tight">Meus Projetos</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-white/5 font-mono">
+              {projects.length}
+            </span>
+          </div>
+        </div>
+
+        {projectsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-slate-900/40 border border-white/5 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border-dashed border-white/10">
+            <div className="inline-flex p-4 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <FolderOpen className="h-8 w-8" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-white">Nenhum projeto encontrado</h3>
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
+                Comece criando seu primeiro projeto para colar seu roteiro de vídeo e planejar a pesquisa visual.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/20 transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Criar Primeiro Projeto</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onDelete={handleDeleteProject}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* System Status Dashboard */}
       <div className="glass-panel p-6 rounded-2xl glow-effect space-y-6">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
             <Server className="h-5 w-5 text-blue-400" />
-            <h2 className="font-semibold text-lg text-white">Status da Infraestrutura (Sprint 0)</h2>
+            <h2 className="font-semibold text-base text-white">Status da Infraestrutura & Banco de Dados</h2>
           </div>
           <span className="text-xs text-slate-400 font-mono">
             {loading ? "Verificando..." : `Atualizado em: ${new Date().toLocaleTimeString()}`}
@@ -140,21 +242,12 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* RightsStatus Principles Highlight */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/30 via-indigo-950/20 to-slate-900/40 border border-blue-500/20 space-y-3">
-        <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm">
-          <ShieldCheck className="h-5 w-5" />
-          <span>Princípio Fundamental de Licenciamento</span>
-        </div>
-        <p className="text-sm text-slate-300 leading-relaxed">
-          O FrameScout não assume que o acesso técnico a um arquivo implica direito de reutilização.
-          Toda mídia é classificada como <code className="text-emerald-400 font-mono text-xs">SAFE_REUSE</code>,{" "}
-          <code className="text-blue-400 font-mono text-xs">ATTRIBUTION_REQUIRED</code>,{" "}
-          <code className="text-amber-400 font-mono text-xs">REVIEW_REQUIRED</code>,{" "}
-          <code className="text-purple-400 font-mono text-xs">REFERENCE_ONLY</code> ou{" "}
-          <code className="text-red-400 font-mono text-xs">BLOCKED</code>.
-        </p>
-      </div>
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={handleProjectCreated}
+      />
     </div>
   );
 }
