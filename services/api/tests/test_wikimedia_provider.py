@@ -2,7 +2,13 @@ import pytest
 
 from app.domain.enums import RightsStatus
 from app.domain.schemas import SearchQueryBase
-from app.providers.wikimedia import WikimediaProvider, derive_rights_status
+from app.providers.wikimedia import WikimediaProvider, clean_html_tags, derive_rights_status
+
+
+def test_clean_html_tags_and_unescape():
+    raw = '<a href="https://example.com">John &amp; Jane Doe</a> &quot;Photographers&#039;'
+    cleaned = clean_html_tags(raw)
+    assert cleaned == "John & Jane Doe \"Photographers'"
 
 
 def test_derive_rights_status_logic():
@@ -24,7 +30,13 @@ def test_derive_rights_status_logic():
     status, lic, _ = derive_rights_status("CC BY 3.0", credit_text="Jane Smith")
     assert status == RightsStatus.ATTRIBUTION_REQUIRED
 
-    # 3. Fair use / Restricted / Unknown -> REVIEW_REQUIRED
+    # 3. Non-Commercial / Fair use / Restricted -> REVIEW_REQUIRED
+    status, lic, _ = derive_rights_status("CC BY-NC 4.0", credit_text="Artist")
+    assert status == RightsStatus.REVIEW_REQUIRED
+
+    status, lic, _ = derive_rights_status("CC BY-NC-SA 2.0", credit_text="Artist")
+    assert status == RightsStatus.REVIEW_REQUIRED
+
     status, lic, _ = derive_rights_status("Fair use / Trademark")
     assert status == RightsStatus.REVIEW_REQUIRED
 

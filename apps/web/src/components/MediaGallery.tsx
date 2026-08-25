@@ -56,6 +56,7 @@ export function MediaGallery({
 
     setLoading(true);
     setError(null);
+    setFilter("ALL"); // Reset filter to show all newly fetched results
     try {
       const provParam = selectedProvider === "all" ? undefined : selectedProvider;
       const results = await searchSceneMedia(sceneId, provParam, 4);

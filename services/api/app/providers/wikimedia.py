@@ -1,3 +1,4 @@
+import html
 import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,10 +15,11 @@ WIKIMEDIA_USER_AGENT = "FrameScout/0.1.0 (contact@framescout.io)"
 
 
 def clean_html_tags(text: str) -> str:
-    """Remove tags HTML presentes nos metadados da Wikimedia."""
+    """Remove tags HTML e decodifica entidades HTML presentes nos metadados da Wikimedia."""
     if not text:
         return ""
     clean = re.sub(r"<[^>]+>", "", text)
+    clean = html.unescape(clean)
     return " ".join(clean.split()).strip()
 
 
@@ -28,12 +30,34 @@ def derive_rights_status(
 ) -> Tuple[RightsStatus, str, str]:
     """
     Motor heurístico de análise e derivação jurídica de licenças da Wikimedia Commons.
+    A ordem de avaliação prioriza restrições restritivas (Não-Comercial/Fair Use) antes de CC-BY.
     Retorna: (RightsStatus, licença_padronizada, texto_de_atribuição)
     """
     raw_lic = (license_name or usage_terms or "").strip()
     lic_lower = raw_lic.lower()
 
-    # 1. Domínio Público / CC0 (Reuso livre sem exigência de crédito legal)
+    # 1. Uso Restrito, Não-Comercial (-NC), Sem Derivações (-ND), Fair Use ou Marca Registrada
+    if any(
+        term in lic_lower
+        for term in [
+            "-nc",
+            "nc",
+            "non-commercial",
+            "noncommercial",
+            "fair use",
+            "trademark",
+            "copyright",
+            "restricted",
+            "-nd",
+            "no derivatives",
+            "noderivs",
+        ]
+    ):
+        norm_lic = raw_lic if raw_lic else "Restricted / Non-Commercial / Fair Use"
+        attrib = f"Uso editorial sob revisão ({norm_lic}) via Wikimedia Commons"
+        return RightsStatus.REVIEW_REQUIRED, norm_lic, attrib
+
+    # 2. Domínio Público / CC0 (Reuso livre sem exigência de crédito legal)
     if any(
         term in lic_lower
         for term in ["public domain", "cc0", "pd-", "pd ", "no restrictions", "pd-self", "pd-us"]
@@ -42,7 +66,7 @@ def derive_rights_status(
         attrib = f"Domínio Público via Wikimedia Commons ({norm_lic})"
         return RightsStatus.SAFE_REUSE, norm_lic, attrib
 
-    # 2. Creative Commons com Atribuição (CC-BY, CC-BY-SA, GFDL)
+    # 3. Creative Commons com Atribuição Comercial Livre (CC-BY, CC-BY-SA, GFDL)
     if any(
         term in lic_lower
         for term in ["cc-by", "cc by", "cc_by", "attribution", "gfdl", "gnu fdl"]
@@ -51,15 +75,6 @@ def derive_rights_status(
         author_str = clean_html_tags(credit_text or "Autor Desconhecido")
         attrib = f"Mídia por {author_str} sob licença {norm_lic} via Wikimedia Commons"
         return RightsStatus.ATTRIBUTION_REQUIRED, norm_lic, attrib
-
-    # 3. Uso Restrito, Não-Comercial ou Marca Registrada
-    if any(
-        term in lic_lower
-        for term in ["fair use", "non-commercial", "nc", "trademark", "copyright", "restricted"]
-    ):
-        norm_lic = raw_lic if raw_lic else "Restricted / Fair Use"
-        attrib = f"Uso editorial sob revisão ({norm_lic}) via Wikimedia Commons"
-        return RightsStatus.REVIEW_REQUIRED, norm_lic, attrib
 
     # 4. Licença Não Especificada ou Inconclusiva -> Exige Revisão Humana
     norm_lic = raw_lic if raw_lic else "Licença não especificada (Revisão Necessária)"
