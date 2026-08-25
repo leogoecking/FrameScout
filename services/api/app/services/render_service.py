@@ -183,7 +183,8 @@ class RenderService:
                                     framing_mode = "PAN_AND_ZOOM"
                                     break
 
-                        media_file_path = os.path.join(temp_dir, f"scene_{idx:03d}_media")
+                        media_file_base = os.path.join(temp_dir, f"scene_{idx:03d}_media")
+                        media_file_path = ""
                         has_downloaded_media = False
 
                         if candidate:
@@ -191,44 +192,85 @@ class RenderService:
                                 attributions_set.add(candidate.attribution)
 
                             meta_dict = candidate.metadata_json or {}
-                            raw_url = (
-                                candidate.preview_url or meta_dict.get("file_url") or candidate.url
-                            )
-                            download_url = RenderService._sanitize_media_url(raw_url)
-
                             is_video_type = (
                                 candidate.media_type.value == "VIDEO"
                                 if hasattr(candidate.media_type, "value")
                                 else str(candidate.media_type) == "VIDEO"
                             )
 
-                            ext = ".jpg"
-                            if is_video_type or "video" in download_url.lower():
-                                ext = ".mp4"
-                            elif download_url.lower().endswith(".png"):
-                                ext = ".png"
+                            # Lista de URLs em ordem de prioridade para download
+                            candidate_urls: List[str] = []
+                            if is_video_type:
+                                if meta_dict.get("video_stream_url"):
+                                    candidate_urls.append(meta_dict["video_stream_url"])
+                                if meta_dict.get("download_link"):
+                                    candidate_urls.append(meta_dict["download_link"])
+                                if meta_dict.get("file_url") and any(
+                                    ext in meta_dict["file_url"].lower()
+                                    for ext in [".mp4", ".webm", ".ogv", ".mov"]
+                                ):
+                                    candidate_urls.append(meta_dict["file_url"])
+                                if candidate.preview_url:
+                                    candidate_urls.append(candidate.preview_url)
+                                if candidate.url:
+                                    candidate_urls.append(candidate.url)
+                            else:
+                                if meta_dict.get("download_original"):
+                                    candidate_urls.append(meta_dict["download_original"])
+                                if meta_dict.get("download_large2x"):
+                                    candidate_urls.append(meta_dict["download_large2x"])
+                                if meta_dict.get("file_url"):
+                                    candidate_urls.append(meta_dict["file_url"])
+                                if candidate.preview_url:
+                                    candidate_urls.append(candidate.preview_url)
+                                if candidate.url:
+                                    candidate_urls.append(candidate.url)
 
-                            media_file_path += ext
+                            for raw_target_url in candidate_urls:
+                                download_url = RenderService._sanitize_media_url(raw_target_url)
+                                if not download_url:
+                                    continue
+                                try:
+                                    res = await http_client.get(download_url)
+                                    if res.status_code == 200 and len(res.content) > 500:
+                                        content = res.content
+                                        # Identificação de formato via magic bytes
+                                        is_real_video = (
+                                            b"ftyp" in content[0:32]
+                                            or content.startswith(b"\x1a\x45\xdf\xa3")
+                                            or content.startswith(b"OggS")
+                                            or "video"
+                                            in res.headers.get("content-type", "").lower()
+                                        )
+                                        if is_real_video:
+                                            ext = ".mp4"
+                                        elif content.startswith(b"\x89PNG"):
+                                            ext = ".png"
+                                        elif content.startswith(b"GIF"):
+                                            ext = ".gif"
+                                        elif (
+                                            content.startswith(b"RIFF") and b"WEBP" in content[:16]
+                                        ):
+                                            ext = ".webp"
+                                        else:
+                                            ext = ".jpg"
 
-                            try:
-                                res = await http_client.get(download_url)
-                                if res.status_code == 200 and len(res.content) > 500:
-                                    with open(media_file_path, "wb") as mf:  # noqa: ASYNC230
-                                        mf.write(res.content)
-                                    has_downloaded_media = True
-                                    logger.info(
-                                        f"Mídia baixada para Cena {scene.position} "
-                                        f"({len(res.content)} bytes)"
-                                    )
-                                else:
+                                        target_path = f"{media_file_base}{ext}"
+                                        with open(target_path, "wb") as mf:  # noqa: ASYNC230
+                                            mf.write(content)
+                                        media_file_path = target_path
+                                        has_downloaded_media = True
+                                        logger.info(
+                                            f"Mídia ({ext}) baixada para Cena {scene.position} "
+                                            f"({len(content)} bytes) de {download_url}"
+                                        )
+                                        break
+                                except Exception as dl_err:
                                     logger.warning(
-                                        f"Status {res.status_code} ({len(res.content)}B) "
-                                        f"ao baixar {download_url}"
+                                        f"Tentativa download falhou ({download_url}): {dl_err}"
                                     )
-                            except Exception as dl_err:
-                                logger.warning(f"Falha download {download_url}: {dl_err}")
 
-                        # Se não baixou arquivo válido, limpa o path para fallback
+                        # Se não baixou arquivo válido, mantém media_file_path vazio para fallback
                         if not has_downloaded_media:
                             media_file_path = ""
 
