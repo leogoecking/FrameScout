@@ -23,11 +23,14 @@ services:
       dockerfile: infra/docker/Dockerfile.api
     container_name: framescout_api
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-framescout}:${POSTGRES_PASSWORD:-framescout_dev_password}@db:5432/${POSTGRES_DB:-framescout_db}
       ENVIRONMENT: development
       DEBUG: "true"
       CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+      PEXELS_API_KEY: ${PEXELS_API_KEY:-}
     ports:
       - "8000:8000"
     depends_on:

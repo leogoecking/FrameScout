@@ -49,26 +49,44 @@ class PexelsProvider(MediaProvider):
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             # 1. Buscar Fotos
-            photo_res = await client.get(
-                f"{self.base_url}/v1/search",
-                headers=headers,
-                params={"query": query.query, "per_page": half_limit},
-            )
-            if photo_res.status_code == 200:
-                photo_data = photo_res.json()
-                for p in photo_data.get("photos", []):
-                    candidates.append(self._map_photo_to_candidate(p, query.query))
+            try:
+                photo_res = await client.get(
+                    f"{self.base_url}/v1/search",
+                    headers=headers,
+                    params={"query": query.query, "per_page": half_limit},
+                )
+                if photo_res.status_code == 200:
+                    photo_data = photo_res.json()
+                    for p in photo_data.get("photos", []):
+                        candidates.append(self._map_photo_to_candidate(p, query.query))
+                else:
+                    logger.warning(
+                        f"Pexels Photos status {photo_res.status_code}: {photo_res.text[:100]}"
+                    )
+            except Exception as pe:
+                logger.warning(f"Erro na requisição de fotos do Pexels: {pe}")
 
             # 2. Buscar Vídeos
-            video_res = await client.get(
-                f"{self.base_url}/videos/search",
-                headers=headers,
-                params={"query": query.query, "per_page": half_limit},
-            )
-            if video_res.status_code == 200:
-                video_data = video_res.json()
-                for v in video_data.get("videos", []):
-                    candidates.append(self._map_video_to_candidate(v, query.query))
+            try:
+                video_res = await client.get(
+                    f"{self.base_url}/videos/search",
+                    headers=headers,
+                    params={"query": query.query, "per_page": half_limit},
+                )
+                if video_res.status_code == 200:
+                    video_data = video_res.json()
+                    for v in video_data.get("videos", []):
+                        candidates.append(self._map_video_to_candidate(v, query.query))
+                else:
+                    logger.warning(
+                        f"Pexels Videos status {video_res.status_code}: {video_res.text[:100]}"
+                    )
+            except Exception as ve:
+                logger.warning(f"Erro na requisição de vídeos do Pexels: {ve}")
+
+        # Se a busca remota não encontrou resultados, recorre ao sandbox
+        if not candidates:
+            return self._generate_sandbox_candidates(query, limit)
 
         return candidates[:limit]
 
