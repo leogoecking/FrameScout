@@ -40,11 +40,20 @@ export function VisualPlanExportModal({
   };
 
   const handleDownloadMarkdown = () => {
+    const sanitizedTitle = plan.project_name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    const filename = `plano-visual-${sanitizedTitle || "projeto"}.md`;
     const blob = new Blob([plan.markdown_document], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `plano-visual-${plan.project_name.toLowerCase().replace(/\s+/g, "-")}.md`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -72,7 +81,7 @@ export function VisualPlanExportModal({
 
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="h-8 w-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -83,7 +92,7 @@ export function VisualPlanExportModal({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setActiveTab("MARKDOWN")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === "MARKDOWN"
                   ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
                   : "text-slate-400 hover:text-white hover:bg-white/5"
@@ -95,7 +104,7 @@ export function VisualPlanExportModal({
 
             <button
               onClick={() => setActiveTab("CREDITS")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === "CREDITS"
                   ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
                   : "text-slate-400 hover:text-white hover:bg-white/5"
@@ -107,7 +116,7 @@ export function VisualPlanExportModal({
 
             <button
               onClick={() => setActiveTab("JSON")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === "JSON"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
                   : "text-slate-400 hover:text-white hover:bg-white/5"
@@ -122,7 +131,7 @@ export function VisualPlanExportModal({
             {activeTab === "MARKDOWN" && (
               <button
                 onClick={handleDownloadMarkdown}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium flex items-center gap-1.5 transition-all"
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5" />
                 <span>Baixar .md</span>
@@ -135,7 +144,7 @@ export function VisualPlanExportModal({
                 else if (activeTab === "JSON") handleCopy(JSON.stringify(plan, null, 2));
                 else handleCopy(creditsContent);
               }}
-              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all"
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all cursor-pointer"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
               <span>{copied ? "Copiado!" : "Copiar Conteúdo"}</span>

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MediaCandidate, RightsStatus } from "@/types";
 import { 
   ShieldCheck, 
@@ -84,6 +84,10 @@ export function MediaCandidateCard({
   const [imgError, setImgError] = useState(false);
   const [framingMode, setFramingMode] = useState<string>(currentFramingMode);
   const [selecting, setSelecting] = useState(false);
+
+  useEffect(() => {
+    setFramingMode(currentFramingMode || "FILL");
+  }, [currentFramingMode]);
 
   const isVideo = candidate.media_type === "VIDEO";
   const statusConfig =

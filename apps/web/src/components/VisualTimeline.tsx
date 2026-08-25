@@ -16,7 +16,8 @@ import {
   CheckCircle2, 
   AlertTriangle,
   FileText,
-  Maximize2
+  Maximize2,
+  Image as ImageIcon
 } from "lucide-react";
 
 interface VisualTimelineProps {
@@ -74,6 +75,7 @@ export function VisualTimeline({
   const [plan, setPlan] = useState<VisualPlanExport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
 
   const loadPlan = useCallback(async () => {
     setLoading(true);
@@ -91,6 +93,10 @@ export function VisualTimeline({
   useEffect(() => {
     loadPlan();
   }, [loadPlan]);
+
+  const handleImgError = (scenePos: number) => {
+    setImgErrors((prev) => ({ ...prev, [scenePos]: true }));
+  };
 
   if (loading) {
     return (
@@ -209,6 +215,7 @@ export function VisualTimeline({
             ? rightsBadgeStyles[candidate.rights_status] || rightsBadgeStyles.REVIEW_REQUIRED
             : null;
           const StatusIcon = statusConfig?.icon;
+          const isImgBroken = imgErrors[scene.scene_position];
 
           return (
             <div
@@ -251,15 +258,30 @@ export function VisualTimeline({
                 {candidate ? (
                   <div className="flex flex-col h-full justify-between">
                     <div className="relative aspect-video w-full bg-slate-900 overflow-hidden">
-                      <img
-                        src={candidate.preview_url}
-                        alt={candidate.title || "Preview"}
-                        className={`w-full h-full ${
-                          asset?.framing_mode === "FIT"
-                            ? "object-contain bg-black"
-                            : "object-cover"
-                        }`}
-                      />
+                      {candidate.preview_url && !isImgBroken ? (
+                        <img
+                          src={candidate.preview_url}
+                          alt={candidate.title || "Preview"}
+                          onError={() => handleImgError(scene.scene_position)}
+                          className={`w-full h-full ${
+                            asset?.framing_mode === "FIT"
+                              ? "object-contain bg-black"
+                              : "object-cover"
+                          }`}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-900 gap-1.5 p-4 text-center">
+                          {candidate.media_type === "VIDEO" ? (
+                            <Film className="h-7 w-7 text-slate-500" />
+                          ) : (
+                            <ImageIcon className="h-7 w-7 text-slate-500" />
+                          )}
+                          <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3 text-amber-500/70" /> Prévia indisponível
+                          </span>
+                        </div>
+                      )}
+
                       <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                         <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur text-[10px] font-mono text-white border border-white/10 flex items-center gap-1">
                           <Film className="h-3 w-3 text-blue-400" />
