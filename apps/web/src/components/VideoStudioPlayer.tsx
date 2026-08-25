@@ -23,7 +23,8 @@ import {
   RefreshCw, 
   Smartphone, 
   Monitor,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from "lucide-react";
 
 interface VideoStudioPlayerProps {
@@ -205,6 +206,13 @@ export function VideoStudioPlayer({
                   <span>Pronto ({activeJob.duration_seconds}s)</span>
                 </span>
               )}
+
+              {activeJob?.status === "FAILED" && (
+                <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-mono font-medium flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Falha na renderização</span>
+                </span>
+              )}
             </div>
 
             {/* Video Canvas or Progress State */}
@@ -238,6 +246,21 @@ export function VideoStudioPlayer({
                       style={{ width: `${activeJob?.progress || 10}%` }}
                     />
                   </div>
+                </div>
+              ) : activeJob?.status === "FAILED" ? (
+                <div className="p-8 flex flex-col items-center justify-center text-center space-y-3 text-red-400">
+                  <AlertTriangle className="h-10 w-10 text-red-400" />
+                  <p className="text-sm font-semibold">Falha ao processar vídeo</p>
+                  <p className="text-xs text-slate-400 max-w-sm">
+                    {activeJob.error_message || "Ocorreu um erro durante a montagem do vídeo."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStartRender}
+                    className="px-3.5 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-white text-xs font-semibold cursor-pointer transition-all"
+                  >
+                    Tentar Novamente
+                  </button>
                 </div>
               ) : (
                 <div className="p-8 flex flex-col items-center justify-center text-center space-y-3 text-slate-500">

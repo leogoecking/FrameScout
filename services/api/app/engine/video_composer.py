@@ -59,6 +59,8 @@ class VideoComposer:
                 str(duration),
                 "-vf",
                 filter_str,
+                "-r",
+                str(fps),
                 "-c:v",
                 "libx264",
                 "-preset",
@@ -76,7 +78,7 @@ class VideoComposer:
             if framing_mode == "PAN_AND_ZOOM":
                 z_expr = "min(zoom+0.0015,1.25)"
                 filter_str = (
-                    f"zoompan=z='{z_expr}':d={total_frames}:"
+                    f"zoompan=z='{z_expr}':d={total_frames}:fps={fps}:"
                     f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={w}x{h},scale={w}:{h}"
                 )
             elif framing_mode == "FIT":
@@ -100,6 +102,8 @@ class VideoComposer:
                 str(duration),
                 "-vf",
                 filter_str,
+                "-r",
+                str(fps),
                 "-c:v",
                 "libx264",
                 "-preset",
@@ -230,7 +234,9 @@ class VideoComposer:
         concat_txt_path = final_output_path + ".txt"
         with open(concat_txt_path, "w", encoding="utf-8") as f:
             for p in clip_paths:
-                f.write(f"file '{os.path.abspath(p)}'\n")
+                # Escape single quotes properly for FFmpeg concat format
+                safe_path = os.path.abspath(p).replace("'", "'\\''")
+                f.write(f"file '{safe_path}'\n")
 
         cmd = [
             ffmpeg_bin,

@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 import subprocess
 from pathlib import Path
@@ -36,7 +37,7 @@ class TTSEngine:
         Sintetiza a narração da cena em arquivo MP3 e retorna a duração exata em segundos.
         Recorre ao gerador de áudio sintético determinístico se a conexão Edge-TTS falhar.
         """
-        clean_text = text.strip()
+        clean_text = html.unescape(text.strip())
         if not clean_text:
             clean_text = "..."
 
@@ -48,7 +49,7 @@ class TTSEngine:
 
         try:
             communicate = edge_tts.Communicate(clean_text, voice)
-            await asyncio.wait_for(communicate.save(str(out_p)), timeout=25.0)
+            await asyncio.wait_for(communicate.save(str(out_p)), timeout=35.0)
             duration = TTSEngine.get_audio_duration(str(out_p))
             if duration > 0.1:
                 return duration
