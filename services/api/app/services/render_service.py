@@ -226,49 +226,75 @@ class RenderService:
                                 if candidate.url:
                                     candidate_urls.append(candidate.url)
 
-                            for raw_target_url in candidate_urls:
-                                download_url = RenderService._sanitize_media_url(raw_target_url)
-                                if not download_url:
-                                    continue
-                                try:
-                                    res = await http_client.get(download_url)
-                                    if res.status_code == 200 and len(res.content) > 500:
-                                        content = res.content
-                                        # Identificação de formato via magic bytes
-                                        is_real_video = (
-                                            b"ftyp" in content[0:32]
-                                            or content.startswith(b"\x1a\x45\xdf\xa3")
-                                            or content.startswith(b"OggS")
-                                            or "video"
-                                            in res.headers.get("content-type", "").lower()
-                                        )
-                                        if is_real_video:
-                                            ext = ".mp4"
-                                        elif content.startswith(b"\x89PNG"):
-                                            ext = ".png"
-                                        elif content.startswith(b"GIF"):
-                                            ext = ".gif"
-                                        elif (
-                                            content.startswith(b"RIFF") and b"WEBP" in content[:16]
-                                        ):
-                                            ext = ".webp"
-                                        else:
-                                            ext = ".jpg"
+                            # 0. Verificar se é arquivo local (ex: IA Gemini ou cache em disco)
+                            local_candidate_path = meta_dict.get("file_path")
+                            if (
+                                not local_candidate_path
+                                and candidate.url
+                                and candidate.url.startswith("/media/")
+                            ):
+                                local_candidate_path = os.path.join(
+                                    os.getenv("MEDIA_STORAGE_DIR", "/tmp/framescout_media"),
+                                    candidate.url.replace("/media/", ""),
+                                )
 
-                                        target_path = f"{media_file_base}{ext}"
-                                        with open(target_path, "wb") as mf:  # noqa: ASYNC230
-                                            mf.write(content)
-                                        media_file_path = target_path
-                                        has_downloaded_media = True
-                                        logger.info(
-                                            f"Mídia ({ext}) baixada para Cena {scene.position} "
-                                            f"({len(content)} bytes) de {download_url}"
+                            if (
+                                local_candidate_path
+                                and Path(local_candidate_path).exists()  # noqa: ASYNC240
+                            ):
+                                ext = Path(local_candidate_path).suffix or ".jpg"
+                                target_path = f"{media_file_base}{ext}"
+                                shutil.copyfile(local_candidate_path, target_path)
+                                media_file_path = target_path
+                                has_downloaded_media = True
+                                logger.info(
+                                    f"Mídia local carregada para Cena {scene.position} de "
+                                    f"{local_candidate_path}"
+                                )
+
+                            if not has_downloaded_media:
+                                for raw_target_url in candidate_urls:
+                                    download_url = RenderService._sanitize_media_url(raw_target_url)
+                                    try:
+                                        res = await http_client.get(download_url)
+                                        if res.status_code == 200 and len(res.content) > 500:
+                                            content = res.content
+                                            # Identificação de formato via magic bytes
+                                            is_real_video = (
+                                                b"ftyp" in content[0:32]
+                                                or content.startswith(b"\x1a\x45\xdf\xa3")
+                                                or content.startswith(b"OggS")
+                                                or "video"
+                                                in res.headers.get("content-type", "").lower()
+                                            )
+                                            if is_real_video:
+                                                ext = ".mp4"
+                                            elif content.startswith(b"\x89PNG"):
+                                                ext = ".png"
+                                            elif content.startswith(b"GIF"):
+                                                ext = ".gif"
+                                            elif (
+                                                content.startswith(b"RIFF")
+                                                and b"WEBP" in content[:16]
+                                            ):
+                                                ext = ".webp"
+                                            else:
+                                                ext = ".jpg"
+
+                                            target_path = f"{media_file_base}{ext}"
+                                            with open(target_path, "wb") as mf:  # noqa: ASYNC230
+                                                mf.write(content)
+                                            media_file_path = target_path
+                                            has_downloaded_media = True
+                                            logger.info(
+                                                f"Mídia ({ext}) baixada para Cena {scene.position} "
+                                                f"({len(content)} bytes) de {download_url}"
+                                            )
+                                            break
+                                    except Exception as dl_err:
+                                        logger.warning(
+                                            f"Tentativa download falhou ({download_url}): {dl_err}"
                                         )
-                                        break
-                                except Exception as dl_err:
-                                    logger.warning(
-                                        f"Tentativa download falhou ({download_url}): {dl_err}"
-                                    )
 
                         # Se não baixou arquivo válido, mantém media_file_path vazio para fallback
                         if not has_downloaded_media:

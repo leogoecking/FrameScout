@@ -74,6 +74,15 @@ const rightsBadgeStyles: Record<
   },
 };
 
+function resolveMediaUrl(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  return `${apiBase.replace(/\/$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 export function MediaCandidateCard({
   candidate,
   isSelected = false,
@@ -171,7 +180,7 @@ export function MediaCandidateCard({
       <div className="relative aspect-video w-full bg-slate-900 overflow-hidden">
         {candidate.preview_url && !imgError ? (
           <img
-            src={candidate.preview_url}
+            src={resolveMediaUrl(candidate.preview_url)}
             alt={candidate.title || "Mídia"}
             onError={() => setImgError(true)}
             className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${
@@ -241,7 +250,7 @@ export function MediaCandidateCard({
         {/* Hover Action Overlay */}
         <div className="absolute inset-0 bg-black/50 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <a
-            href={candidate.url}
+            href={resolveMediaUrl(candidate.url)}
             target="_blank"
             rel="noreferrer"
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur cursor-pointer"
