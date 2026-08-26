@@ -330,7 +330,9 @@ export function MediaCandidateCard({
           <span className="truncate">Por {candidate.author || "Autor Desconhecido"}</span>
           <span
             className={`text-[10px] uppercase font-mono font-semibold shrink-0 px-1.5 py-0.5 rounded ${
-              (candidate.provider || "").toLowerCase() === "nasa"
+              (candidate.provider || "").toLowerCase() === "gemini"
+                ? "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30 font-bold"
+                : (candidate.provider || "").toLowerCase() === "nasa"
                 ? "bg-sky-500/10 text-sky-400 border border-sky-500/20"
                 : (candidate.provider || "").toLowerCase() === "openverse"
                 ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
@@ -339,7 +341,9 @@ export function MediaCandidateCard({
                 : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             }`}
           >
-            {(candidate.provider || "").toLowerCase() === "nasa"
+            {(candidate.provider || "").toLowerCase() === "gemini"
+              ? "✨ Gemini IA"
+              : (candidate.provider || "").toLowerCase() === "nasa"
               ? "NASA"
               : (candidate.provider || "").toLowerCase() === "openverse"
               ? "Openverse"

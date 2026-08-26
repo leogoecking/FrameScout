@@ -10,6 +10,7 @@ from app.domain.schemas import MediaCandidateBase, SearchQueryBase
 from app.engine.fidelity_engine import FidelityEngine
 from app.models.entities import MediaCandidate, Project, Scene, SearchQuery, SelectedAsset
 from app.providers.base import MediaProvider
+from app.providers.gemini_imagen import GeminiImagenProvider
 from app.providers.nasa import NASAProvider
 from app.providers.openverse import OpenverseProvider
 from app.providers.pexels import PexelsProvider
@@ -22,6 +23,7 @@ def get_providers_map() -> Dict[str, MediaProvider]:
         "openverse": OpenverseProvider(),
         "nasa": NASAProvider(),
         "pexels": PexelsProvider(),
+        "gemini": GeminiImagenProvider(),
     }
 
 
@@ -401,3 +403,78 @@ class MediaService:
             "scenes_covered": covered_scenes,
             "total_scenes": total_scenes,
         }
+
+    @staticmethod
+    async def generate_ai_for_scene(
+        db: AsyncSession,
+        scene_id: UUID,
+        prompt_override: Optional[str] = None,
+        aspect_ratio: str = "16:9",
+        count: int = 2,
+    ) -> List[MediaCandidate]:
+        scene_query = (
+            select(Scene).options(selectinload(Scene.queries)).where(Scene.id == scene_id)
+        )
+        scene_res = await db.execute(scene_query)
+        scene = scene_res.scalar_one_or_none()
+        if not scene:
+            raise KeyError("Cena não encontrada")
+
+        # Determinar o prompt visual ideal
+        if prompt_override and prompt_override.strip():
+            final_prompt = prompt_override.strip()
+        elif scene.visual_intent and len(scene.visual_intent.strip()) > 5:
+            final_prompt = f"{scene.visual_intent}. {scene.narration[:120]}"
+        else:
+            final_prompt = f"{scene.title or ''}. {scene.narration}"
+
+        gemini_provider = GeminiImagenProvider()
+        ai_candidates = await gemini_provider.generate_image(
+            prompt=final_prompt,
+            aspect_ratio=aspect_ratio,
+            sample_count=count,
+        )
+
+        target_query_id: Optional[UUID] = None
+        if scene.queries:
+            target_query_id = scene.queries[0].id
+        else:
+            ai_query = SearchQuery(
+                scene_id=scene.id,
+                query=final_prompt[:80],
+                query_type=QueryType.CONCEPT,
+                priority=1,
+            )
+            db.add(ai_query)
+            await db.flush()
+            target_query_id = ai_query.id
+
+        persisted_candidates: List[MediaCandidate] = []
+        for c in ai_candidates:
+            cand_obj = MediaCandidate(
+                search_query_id=target_query_id,
+                provider=c.provider,
+                external_id=c.external_id,
+                title=c.title,
+                url=c.url,
+                preview_url=c.preview_url,
+                media_type=c.media_type,
+                width=c.width,
+                height=c.height,
+                duration=c.duration,
+                author=c.author,
+                license=c.license,
+                attribution=c.attribution,
+                rights_status=c.rights_status,
+                fidelity_score=0.96,
+                metadata_json=c.metadata_json,
+            )
+            db.add(cand_obj)
+            persisted_candidates.append(cand_obj)
+
+        await db.commit()
+        for cand_obj in persisted_candidates:
+            await db.refresh(cand_obj)
+
+        return persisted_candidates
+

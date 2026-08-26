@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
-from app.domain.schemas import MediaCandidateRead
+from app.domain.schemas import AIGenerateImageRequest, MediaCandidateRead
 from app.services.media_service import MediaService
 
 router = APIRouter(tags=["Media Candidates"])
@@ -153,3 +153,40 @@ async def get_project_fidelity_metrics(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e).strip("'\""),
         ) from e
+
+
+@router.post(
+    "/scenes/{scene_id}/ai/generate-image",
+    response_model=List[MediaCandidateRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="Gerar imagens originais por IA para a cena usando Google Imagen 3",
+)
+async def generate_scene_ai_image(
+    scene_id: UUID,
+    db: DbSession,
+    req: Optional[AIGenerateImageRequest] = None,
+) -> List[MediaCandidateRead]:
+    try:
+        prompt_val = req.prompt if req else None
+        aspect_val = req.aspect_ratio if req and req.aspect_ratio else "16:9"
+        count_val = req.count if req and req.count else 2
+
+        candidates = await MediaService.generate_ai_for_scene(
+            db=db,
+            scene_id=scene_id,
+            prompt_override=prompt_val,
+            aspect_ratio=aspect_val,
+            count=count_val,
+        )
+        return [MediaCandidateRead.model_validate(c) for c in candidates]
+    except KeyError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e).strip("'\""),
+        ) from e
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+

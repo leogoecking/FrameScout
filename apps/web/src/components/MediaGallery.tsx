@@ -8,7 +8,8 @@ import {
   listSceneSelectedAssets, 
   selectAssetForScene, 
   removeSelectedAsset,
-  rerankSceneCandidates
+  rerankSceneCandidates,
+  generateSceneAIImage
 } from "@/lib/api-client";
 import { MediaCandidateCard } from "@/components/MediaCandidateCard";
 import { 
@@ -18,7 +19,8 @@ import {
   AlertCircle,
   FolderOpen,
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Wand2
 } from "lucide-react";
 
 interface MediaGalleryProps {
@@ -36,11 +38,12 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const [candidates, setCandidates] = useState<MediaCandidate[]>(initialCandidates);
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
-  const [filter, setFilter] = useState<"ALL" | "PEXELS" | "WIKIMEDIA" | "OPENVERSE" | "NASA" | "IMAGE" | "VIDEO">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "GEMINI" | "PEXELS" | "WIKIMEDIA" | "OPENVERSE" | "NASA" | "IMAGE" | "VIDEO">("ALL");
   const [fidelityFilter, setFidelityFilter] = useState<"ALL" | "HIGH" | "BROLL">("ALL");
   const [selectedProvider, setSelectedProvider] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [reranking, setReranking] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Auto-fetch candidates and selected assets when sceneId changes
@@ -99,6 +102,22 @@ export function MediaGallery({
     }
   };
 
+  const handleGenerateAI = async () => {
+    setAiGenerating(true);
+    setError(null);
+    try {
+      const results = await generateSceneAIImage(sceneId, {
+        aspect_ratio: "16:9",
+        count: 2,
+      });
+      setCandidates((prev) => [...results, ...prev]);
+    } catch (err: any) {
+      setError(err?.message || "Erro ao gerar imagens por IA com Google Imagen 3.");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   const handleSelectAsset = async (candidateId: string, framingMode: string) => {
     try {
       const res = await selectAssetForScene(sceneId, {
@@ -125,6 +144,7 @@ export function MediaGallery({
 
   const filteredCandidates = candidates.filter((c) => {
     // Provider & Type filter
+    if (filter === "GEMINI" && c.provider.toLowerCase() !== "gemini") return false;
     if (filter === "PEXELS" && c.provider.toLowerCase() !== "pexels") return false;
     if (filter === "WIKIMEDIA" && c.provider.toLowerCase() !== "wikimedia") return false;
     if (filter === "OPENVERSE" && c.provider.toLowerCase() !== "openverse") return false;
@@ -142,6 +162,7 @@ export function MediaGallery({
     return true;
   });
 
+  const geminiCount = candidates.filter((c) => c.provider.toLowerCase() === "gemini").length;
   const pexelsCount = candidates.filter((c) => c.provider.toLowerCase() === "pexels").length;
   const wikiCount = candidates.filter((c) => c.provider.toLowerCase() === "wikimedia").length;
   const openverseCount = candidates.filter((c) => c.provider.toLowerCase() === "openverse").length;
@@ -172,6 +193,19 @@ export function MediaGallery({
               >
                 Todos ({candidates.length})
               </button>
+              {geminiCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("GEMINI")}
+                  className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                    filter === "GEMINI"
+                      ? "bg-fuchsia-600 text-white font-medium shadow-xs"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  ✨ IA Gemini ({geminiCount})
+                </button>
+              )}
               {nasaCount > 0 && (
                 <button
                   type="button"
@@ -303,12 +337,29 @@ export function MediaGallery({
             </button>
           )}
 
+          {/* AI Image Generation Button */}
+          <button
+            type="button"
+            onClick={handleGenerateAI}
+            disabled={aiGenerating}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-fuchsia-500/20 disabled:opacity-50 transition-all cursor-pointer"
+            title="Gerar imagens inéditas por IA utilizando Google Imagen 3 (Gemini)"
+          >
+            {aiGenerating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Wand2 className="h-3.5 w-3.5" />
+            )}
+            <span>{aiGenerating ? "Gerando IA..." : "✨ Gerar com IA"}</span>
+          </button>
+
           <select
             value={selectedProvider}
             onChange={(e) => setSelectedProvider(e.target.value)}
             className="bg-slate-950 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
           >
-            <option value="all">Todas as Fontes (Openverse, NASA, Wiki, Pexels)</option>
+            <option value="all">Todas as Fontes (Openverse, NASA, Wiki, Pexels, IA)</option>
+            <option value="gemini">✨ Apenas IA Gemini (Google Imagen 3)</option>
             <option value="openverse">Apenas Openverse (+700M Imagens Abertas)</option>
             <option value="nasa">Apenas NASA (Missões, Espaço & Vídeos)</option>
             <option value="wikimedia">Apenas Wikimedia (Histórico / Oficial)</option>

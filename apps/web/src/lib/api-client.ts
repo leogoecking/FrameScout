@@ -539,3 +539,22 @@ export async function extractProjectEntities(projectId: string): Promise<Project
   return await res.json();
 }
 
+// --- AI Media Generation (Gemini / Imagen 3) ---
+
+export async function generateSceneAIImage(
+  sceneId: string,
+  data?: { prompt?: string; aspect_ratio?: string; count?: number }
+): Promise<MediaCandidate[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scenes/${sceneId}/ai/generate-image`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data || {}),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to generate AI image: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+

@@ -1,8 +1,10 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.assets import router as assets_router
 from app.api.v1.health import router as health_router
@@ -21,6 +23,7 @@ logger = logging.getLogger("framescout.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Iniciando FrameScout API...")
+    os.makedirs(settings.MEDIA_STORAGE_DIR, exist_ok=True)
     # Em desenvolvimento local, inicializa as tabelas se necessário
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -47,6 +50,10 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Static Media Storage (AI Generated / Local Caches)
+    os.makedirs(settings.MEDIA_STORAGE_DIR, exist_ok=True)
+    app.mount("/media", StaticFiles(directory=settings.MEDIA_STORAGE_DIR), name="media")
+
     # Routers
     app.include_router(health_router)
     app.include_router(health_router, prefix=settings.API_V1_PREFIX)
@@ -61,3 +68,4 @@ def create_application() -> FastAPI:
 
 
 app = create_application()
+

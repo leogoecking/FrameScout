@@ -28,8 +28,10 @@ class Settings(BaseSettings):
             return v
         return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    # External Provider Keys (optional in Sprint 0)
+    # External Provider Keys
     PEXELS_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    MEDIA_STORAGE_DIR: str = "/tmp/framescout_media"
 
     model_config = SettingsConfigDict(
         env_file=".env",

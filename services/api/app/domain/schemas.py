@@ -286,6 +286,19 @@ class ProjectEntitiesResponse(BaseModel):
     scenes_entities: List[SceneEntitiesResponse]
 
 
+# --- AI Generation Schemas ---
+
+
+class AIGenerateImageRequest(BaseModel):
+    prompt: Optional[str] = Field(None, description="Prompt customizado ou refinado pelo usuário")
+    aspect_ratio: Optional[str] = Field(
+        "16:9", description="Proporção da imagem: '16:9', '9:16' ou '1:1'"
+    )
+    count: Optional[int] = Field(
+        2, ge=1, le=4, description="Quantidade de variações a gerar (1 a 4)"
+    )
+
+
 # --- Health Schemas ---
 
 
