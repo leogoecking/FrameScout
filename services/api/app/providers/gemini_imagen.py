@@ -181,11 +181,65 @@ class GeminiImagenProvider(MediaProvider):
                 except Exception as ie:
                     logger.warning(f"Erro ao chamar Google Imagen 3: {ie}")
 
-        # Se a chamada remota falhar ou estiver em quota limit, usa o sandbox de contingência
+            # 3. Se a API do Google retornar cota 0 / 429 ou 404, tenta motor aberto Flux / Turbo
+            if not candidates:
+                try:
+                    candidates = await self._generate_pollinations(
+                        client=client,
+                        prompt=prompt,
+                        aspect_ratio=formatted_aspect,
+                        sample_count=sample_count,
+                    )
+                except Exception as fe:
+                    logger.warning(f"Tentativa de geração aberta por IA falhou: {fe}")
+
+        # 4. Se todas as chamadas remotas falharem ou em modo offline, usa o sandbox de contingência
         if not candidates:
             return self._generate_sandbox_candidates(prompt, aspect_ratio, sample_count)
 
         return candidates[:sample_count]
+
+    async def _generate_pollinations(
+        self,
+        client: httpx.AsyncClient,
+        prompt: str,
+        aspect_ratio: str,
+        sample_count: int,
+    ) -> List[MediaCandidateBase]:
+        import random
+        import urllib.parse
+
+        w, h = (1024, 576) if aspect_ratio == "16:9" else (576, 1024)
+        if aspect_ratio == "1:1":
+            w, h = (768, 768)
+
+        candidates: List[MediaCandidateBase] = []
+        encoded = urllib.parse.quote(prompt[:180])
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) FrameScout/1.0"}
+
+        for i in range(min(sample_count, 2)):
+            seed = random.randint(1000, 999999)
+            url = (
+                f"https://image.pollinations.ai/prompt/{encoded}?"
+                f"width={w}&height={h}&nologo=true&seed={seed}&model=turbo"
+            )
+            try:
+                res = await client.get(url, headers=headers, follow_redirects=True, timeout=20.0)
+                if res.status_code == 200 and len(res.content) > 3000:
+                    cand = self._save_image_and_create_candidate(
+                        img_bytes=res.content,
+                        prompt=prompt,
+                        aspect_ratio=aspect_ratio,
+                        index=i,
+                        author="Flux.1 AI (Open Image Engine)",
+                        attribution="Gerado por IA (Flux.1 / Gemini Provider)",
+                    )
+                    candidates.append(cand)
+            except Exception as e:
+                logger.debug(f"Tentativa de geração via Flux/Pollinations falhou: {e}")
+                break
+
+        return candidates
 
     def _save_image_and_create_candidate(
         self,
@@ -193,6 +247,8 @@ class GeminiImagenProvider(MediaProvider):
         prompt: str,
         aspect_ratio: str,
         index: int,
+        author: str = "Google Imagen 3 (Gemini)",
+        attribution: str = "Gerado por IA (Google Imagen 3 / Gemini)",
     ) -> MediaCandidateBase:
         unique_id = f"gemini_{uuid.uuid4().hex[:12]}"
         filename = f"{unique_id}_{index}.jpg"
@@ -214,9 +270,9 @@ class GeminiImagenProvider(MediaProvider):
             width=width,
             height=height,
             duration=None,
-            author="Google Imagen 3 (Gemini)",
+            author=author,
             license="AI Generated (Open Commercial Use)",
-            attribution="Gerado por IA (Google Imagen 3 / Gemini)",
+            attribution=attribution,
             rights_status=RightsStatus.SAFE_REUSE,
             fidelity_score=0.96,
             metadata_json={
