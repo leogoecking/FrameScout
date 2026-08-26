@@ -79,58 +79,113 @@ class GeminiImagenProvider(MediaProvider):
         aspect_ratio: str,
         sample_count: int,
     ) -> List[MediaCandidateBase]:
-        # Formatar aspecto conforme especificação da API do Imagen 3 (16:9, 9:16, 1:1, 4:3, 3:4)
+        # Formatar aspecto conforme especificação da API (16:9, 9:16, 1:1)
         formatted_aspect = "16:9"
         if aspect_ratio in ["9:16", "portrait"]:
             formatted_aspect = "9:16"
         elif aspect_ratio in ["1:1", "square"]:
             formatted_aspect = "1:1"
 
-        payload = {
-            "instances": [{"prompt": prompt}],
-            "parameters": {
-                "sampleCount": sample_count,
-                "aspectRatio": formatted_aspect,
-                "personGeneration": "ALLOW_ADULT",
-                "safetySetting": "BLOCK_MEDIUM_AND_ABOVE",
-            },
-        }
+        candidates: List[MediaCandidateBase] = []
 
-        url = f"{GEMINI_API_ENDPOINT}?key={self.api_key}"
-        headers = {"Content-Type": "application/json"}
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            res = await client.post(url, headers=headers, json=payload)
-            if res.status_code != 200:
-                logger.warning(
-                    f"Google Imagen 3 retornou status {res.status_code}: {res.text[:150]}"
-                )
-                return self._generate_sandbox_candidates(prompt, aspect_ratio, sample_count)
-
-            data = res.json()
-            predictions = data.get("predictions", [])
-            if not predictions:
-                logger.warning("Nenhuma predição de imagem retornada pelo Imagen 3.")
-                return self._generate_sandbox_candidates(prompt, aspect_ratio, sample_count)
-
-            candidates: List[MediaCandidateBase] = []
-            for idx, pred in enumerate(predictions):
-                b64_str = pred.get("bytesBase64Encoded")
-                if not b64_str:
-                    continue
-
-                img_bytes = base64.b64decode(b64_str)
-                cand = self._save_image_and_create_candidate(
-                    img_bytes=img_bytes,
-                    prompt=prompt,
-                    aspect_ratio=formatted_aspect,
-                    index=idx,
-                )
-                candidates.append(cand)
-
-            return candidates if candidates else self._generate_sandbox_candidates(
-                prompt, aspect_ratio, sample_count
+        async with httpx.AsyncClient(timeout=35.0) as client:
+            # 1. Tentar via Gemini Multimodal Image Generation
+            gemini_image_url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"gemini-2.5-flash-image:generateContent?key={self.api_key}"
             )
+            gemini_payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": (
+                                    f"Generate a cinematic, high-definition background image with "
+                                    f"aspect ratio {formatted_aspect}: {prompt}"
+                                )
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": {"responseModalities": ["IMAGE", "TEXT"]},
+            }
+
+            try:
+                res = await client.post(
+                    gemini_image_url,
+                    headers={"Content-Type": "application/json"},
+                    json=gemini_payload,
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    preds = data.get("candidates", [])
+                    img_idx = 0
+                    for c in preds:
+                        parts = c.get("content", {}).get("parts", [])
+                        for p in parts:
+                            inline = p.get("inlineData")
+                            if inline and inline.get("data"):
+                                img_bytes = base64.b64decode(inline["data"])
+                                cand = self._save_image_and_create_candidate(
+                                    img_bytes=img_bytes,
+                                    prompt=prompt,
+                                    aspect_ratio=formatted_aspect,
+                                    index=img_idx,
+                                )
+                                candidates.append(cand)
+                                img_idx += 1
+                else:
+                    logger.info(
+                        f"Gemini Flash Image retornou status {res.status_code}: {res.text[:120]}"
+                    )
+            except Exception as e:
+                logger.warning(f"Erro ao chamar Gemini Flash Image: {e}")
+
+            # 2. Se não retornou candidatos, tentar via Imagen 3 Predict API
+            if not candidates:
+                try:
+                    imagen_url = f"{GEMINI_API_ENDPOINT}?key={self.api_key}"
+                    imagen_payload = {
+                        "instances": [{"prompt": prompt}],
+                        "parameters": {
+                            "sampleCount": sample_count,
+                            "aspectRatio": formatted_aspect,
+                            "personGeneration": "ALLOW_ADULT",
+                            "safetySetting": "BLOCK_MEDIUM_AND_ABOVE",
+                        },
+                    }
+                    res_img = await client.post(
+                        imagen_url,
+                        headers={"Content-Type": "application/json"},
+                        json=imagen_payload,
+                    )
+                    if res_img.status_code == 200:
+                        data = res_img.json()
+                        predictions = data.get("predictions", [])
+                        for idx, pred in enumerate(predictions):
+                            b64_str = pred.get("bytesBase64Encoded")
+                            if b64_str:
+                                img_bytes = base64.b64decode(b64_str)
+                                cand = self._save_image_and_create_candidate(
+                                    img_bytes=img_bytes,
+                                    prompt=prompt,
+                                    aspect_ratio=formatted_aspect,
+                                    index=idx,
+                                )
+                                candidates.append(cand)
+                    else:
+                        logger.info(
+                            f"Google Imagen 3 retornou status {res_img.status_code}: "
+                            f"{res_img.text[:120]}"
+                        )
+                except Exception as ie:
+                    logger.warning(f"Erro ao chamar Google Imagen 3: {ie}")
+
+        # Se a chamada remota falhar ou estiver em quota limit, usa o sandbox de contingência
+        if not candidates:
+            return self._generate_sandbox_candidates(prompt, aspect_ratio, sample_count)
+
+        return candidates[:sample_count]
 
     def _save_image_and_create_candidate(
         self,
@@ -223,7 +278,7 @@ class GeminiImagenProvider(MediaProvider):
                 MediaCandidateBase(
                     provider=self.name,
                     external_id=unique_id,
-                    title=f"Imagem IA: {prompt[:50]} (#{i+1})",
+                    title=f"Imagem IA: {prompt[:50]} (#{i + 1})",
                     url=media_url,
                     preview_url=media_url,
                     media_type=MediaType.IMAGE,

@@ -189,4 +189,3 @@ async def generate_scene_ai_image(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
-

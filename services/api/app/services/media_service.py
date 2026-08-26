@@ -412,9 +412,7 @@ class MediaService:
         aspect_ratio: str = "16:9",
         count: int = 2,
     ) -> List[MediaCandidate]:
-        scene_query = (
-            select(Scene).options(selectinload(Scene.queries)).where(Scene.id == scene_id)
-        )
+        scene_query = select(Scene).options(selectinload(Scene.queries)).where(Scene.id == scene_id)
         scene_res = await db.execute(scene_query)
         scene = scene_res.scalar_one_or_none()
         if not scene:
@@ -477,4 +475,3 @@ class MediaService:
             await db.refresh(cand_obj)
 
         return persisted_candidates
-
