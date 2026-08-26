@@ -4,7 +4,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.domain.enums import EntityCategory, MediaType, QueryType, RenderStatus, RightsStatus
+from app.domain.enums import (
+    EntityCategory,
+    MediaType,
+    QueryType,
+    RenderStatus,
+    RightsStatus,
+    ScriptTone,
+)
 
 # --- Project Schemas ---
 
@@ -297,6 +304,34 @@ class AIGenerateImageRequest(BaseModel):
     count: Optional[int] = Field(
         2, ge=1, le=4, description="Quantidade de variações a gerar (1 a 4)"
     )
+
+
+class GenerateScriptRequest(BaseModel):
+    topic: str = Field(..., min_length=3, description="Tema ou assunto principal do vídeo")
+    tone: Optional[ScriptTone] = Field(
+        default=ScriptTone.DOCUMENTARY, description="Tom e estilo narrativo"
+    )
+    target_duration: Optional[str] = Field(
+        default="3m", description="Duração estimada: '60s', '3m', '5m' ou '10m'"
+    )
+    target_language: Optional[str] = Field(default="pt-BR", description="Idioma do roteiro")
+    context_notes: Optional[str] = Field(
+        default=None, description="Pontos-chave ou instruções adicionais"
+    )
+    auto_generate_scenes: Optional[bool] = Field(
+        default=False, description="Se True, divide o roteiro gerado em cenas imediatamente"
+    )
+
+
+class GenerateScriptResponse(BaseModel):
+    title: str
+    topic: str
+    tone: ScriptTone
+    estimated_duration_seconds: int
+    word_count: int
+    script_raw: str
+    hook: Optional[str] = None
+    call_to_action: Optional[str] = None
 
 
 # --- Health Schemas ---

@@ -15,7 +15,8 @@ import {
   SelectedAssetCreate,
   SelectedAssetUpdate,
   VisualPlanExport, RenderJob, RenderJobCreate, VoiceOption, ProjectFidelityMetrics,
-  SceneEntitiesResponse, ProjectEntitiesResponse
+  SceneEntitiesResponse, ProjectEntitiesResponse,
+  GenerateScriptRequest, GenerateScriptResponse
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -556,5 +557,39 @@ export async function generateSceneAIImage(
   }
   return await res.json();
 }
+
+// --- AI Script Generator (Gemini Copilot) ---
+
+export async function generateScript(
+  data: GenerateScriptRequest
+): Promise<GenerateScriptResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/generate-script`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to generate script: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+export async function generateProjectScript(
+  projectId: string,
+  data: GenerateScriptRequest
+): Promise<GenerateScriptResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}/generate-script`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `Failed to generate project script: ${res.status}`);
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
 
 

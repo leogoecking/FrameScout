@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
+from app.domain.enums import ScriptTone
 from app.domain.schemas import (
+    GenerateScriptRequest,
+    GenerateScriptResponse,
     ProjectCreate,
     ProjectEntitiesResponse,
     ProjectRead,
@@ -13,8 +16,10 @@ from app.domain.schemas import (
     SceneEntitiesResponse,
 )
 from app.engine.entity_engine import EntityEngine
+from app.engine.script_engine import ScriptEngine
 from app.models.entities import Project
 from app.services.project_service import ProjectService
+from app.services.scene_service import SceneService
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -176,3 +181,58 @@ async def extract_project_entities(
         entities_by_category={k: sorted(list(v)) for k, v in entities_by_cat.items()},
         scenes_entities=scenes_entities,
     )
+
+
+@router.post(
+    "/generate-script",
+    response_model=GenerateScriptResponse,
+    summary="Gerar roteiro de vídeo estruturado por IA a partir de um tema com Gemini",
+)
+async def generate_script(
+    data: GenerateScriptRequest,
+) -> GenerateScriptResponse:
+    return await ScriptEngine.generate_script(
+        topic=data.topic,
+        tone=data.tone or ScriptTone.DOCUMENTARY,
+        target_duration=data.target_duration or "3m",
+        language=data.target_language or "pt-BR",
+        context_notes=data.context_notes,
+    )
+
+
+@router.post(
+    "/{project_id}/generate-script",
+    response_model=GenerateScriptResponse,
+    summary="Gerar roteiro com IA e aplicar diretamente no projeto",
+)
+async def generate_project_script(
+    project_id: UUID,
+    data: GenerateScriptRequest,
+    db: DbSession,
+) -> GenerateScriptResponse:
+    project = await ProjectService.get(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projeto não encontrado",
+        )
+
+    gen_res = await ScriptEngine.generate_script(
+        topic=data.topic,
+        tone=data.tone or ScriptTone.DOCUMENTARY,
+        target_duration=data.target_duration or "3m",
+        language=data.target_language or project.language or "pt-BR",
+        context_notes=data.context_notes,
+    )
+
+    # Atualizar script_raw do projeto
+    project.script_raw = gen_res.script_raw
+    await db.commit()
+    await db.refresh(project)
+
+    # Se auto_generate_scenes for True, gera cenas automaticamente a partir do novo roteiro
+    if data.auto_generate_scenes:
+        await SceneService.generate_from_script(db, project_id)
+
+    return gen_res
+

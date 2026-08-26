@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, Plus, Sparkles, Loader2 } from "lucide-react";
+import { X, Plus, Sparkles, Loader2, Wand2 } from "lucide-react";
 import { Project, ProjectCreate } from "@/types";
 import { createProject } from "@/lib/api-client";
+import { AIScriptGeneratorModal } from "@/components/AIScriptGeneratorModal";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export function CreateProjectModal({ isOpen, onClose, onCreated }: CreateProject
   const [scriptRaw, setScriptRaw] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -105,12 +107,22 @@ export function CreateProjectModal({ isOpen, onClose, onCreated }: CreateProject
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-              Roteiro Inicial <span className="text-slate-500 font-normal">(Opcional)</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Roteiro Inicial <span className="text-slate-500 font-normal">(Opcional)</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-fuchsia-950/60 hover:bg-fuchsia-900/60 border border-fuchsia-500/30 text-fuchsia-300 text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+              >
+                <Wand2 className="h-3 w-3 text-fuchsia-400" />
+                <span>✨ Gerar com IA</span>
+              </button>
+            </div>
             <textarea
               rows={4}
-              placeholder="Cole aqui o texto ou narração do seu vídeo..."
+              placeholder="Cole aqui o texto do seu vídeo ou clique em '✨ Gerar com IA'..."
               value={scriptRaw}
               onChange={(e) => setScriptRaw(e.target.value)}
               className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
@@ -144,6 +156,18 @@ export function CreateProjectModal({ isOpen, onClose, onCreated }: CreateProject
           </div>
         </form>
       </div>
+
+      {/* AI Script Generator Modal */}
+      <AIScriptGeneratorModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onScriptGenerated={(script, generatedData) => {
+          setScriptRaw(script);
+          if (!name.trim() && generatedData.title) {
+            setName(generatedData.title);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Check, Loader2, FileCode, AlertCircle } from "lucide-react";
+import { Save, Check, Loader2, FileCode, AlertCircle, Sparkles } from "lucide-react";
+import { AIScriptGeneratorModal } from "@/components/AIScriptGeneratorModal";
 
 interface ScriptEditorProps {
   initialScript: string;
+  projectId?: string;
   onSave: (script: string) => Promise<void>;
 }
 
-export function ScriptEditor({ initialScript, onSave }: ScriptEditorProps) {
+export function ScriptEditor({ initialScript, projectId, onSave }: ScriptEditorProps) {
   const [script, setScript] = useState(initialScript || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   useEffect(() => {
     setScript(initialScript || "");
@@ -68,6 +71,16 @@ export function ScriptEditor({ initialScript, onSave }: ScriptEditorProps) {
           </div>
 
           <button
+            type="button"
+            onClick={() => setIsAiModalOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-fuchsia-600/20 to-purple-600/20 hover:from-fuchsia-600/30 hover:to-purple-600/30 border border-fuchsia-500/40 text-fuchsia-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+            title="Gerar ou reescrever roteiro completo com Gemini"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-fuchsia-400" />
+            <span>✨ Gerar com IA</span>
+          </button>
+
+          <button
             onClick={handleSave}
             disabled={isSaving || isSaved}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all ${
@@ -120,6 +133,19 @@ Cena 2: Voos foram cancelados, hospitais paralisaram atendimentos e caixas eletr
           className="w-full h-96 bg-transparent text-slate-100 placeholder:text-slate-600 text-sm leading-relaxed focus:outline-none resize-y font-sans selection:bg-blue-600 selection:text-white"
         />
       </div>
+
+      {/* AI Script Generator Modal */}
+      <AIScriptGeneratorModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        projectId={projectId}
+        onScriptGenerated={async (newScript) => {
+          setScript(newScript);
+          setIsSaved(false);
+          await onSave(newScript);
+          setIsSaved(true);
+        }}
+      />
     </div>
   );
 }

@@ -253,6 +253,7 @@ export default function ProjectWorkspacePage() {
           </div>
           <ScriptEditor
             initialScript={project.script_raw || ""}
+            projectId={project.id}
             onSave={handleSaveScript}
           />
         </div>

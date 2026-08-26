@@ -262,3 +262,31 @@ export interface ProjectEntitiesResponse {
   scenes_entities: SceneEntitiesResponse[];
 }
 
+export type ScriptTone =
+  | 'DOCUMENTARY'
+  | 'TECH_NEWS'
+  | 'EXPLAINER'
+  | 'VIRAL_SHORTS'
+  | 'DRAMATIC_STORYTELLING';
+
+export interface GenerateScriptRequest {
+  topic: string;
+  tone?: ScriptTone;
+  target_duration?: string;
+  target_language?: string;
+  context_notes?: string | null;
+  auto_generate_scenes?: boolean;
+}
+
+export interface GenerateScriptResponse {
+  title: string;
+  topic: string;
+  tone: ScriptTone;
+  estimated_duration_seconds: number;
+  word_count: number;
+  script_raw: string;
+  hook?: string | null;
+  call_to_action?: string | null;
+}
+
+

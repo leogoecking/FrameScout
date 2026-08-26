@@ -56,3 +56,12 @@ class EntityCategory(str, enum.Enum):
     LOCATION = "LOCATION"
     DATE_TIME = "DATE_TIME"
     EVENT = "EVENT"
+
+
+class ScriptTone(str, enum.Enum):
+    DOCUMENTARY = "DOCUMENTARY"
+    TECH_NEWS = "TECH_NEWS"
+    EXPLAINER = "EXPLAINER"
+    VIRAL_SHORTS = "VIRAL_SHORTS"
+    DRAMATIC_STORYTELLING = "DRAMATIC_STORYTELLING"
+
