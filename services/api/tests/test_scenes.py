@@ -182,3 +182,39 @@ async def test_split_and_merge_scenes(async_client):
     # Verify only 1 scene remains in project
     list_res = await async_client.get(f"/api/v1/projects/{project_id}/scenes")
     assert len(list_res.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_segmenter_markdown_and_auto_scene_creation(async_client):
+    markdown_script = """# Titulo: O Colapso dos Chips de IA
+
+**Cena 01: O Início Inesperado**
+Você já parou para pensar em como os chips de IA transformaram o mundo?
+Telas azuis e terminais entraram em pane simultânea.
+
+**Cena 02: O Ponto de Ruptura**
+Especialistas e analistas não esperavam uma reviravolta tão rápida nos servidores.
+
+**Cena 03: O Desfecho e o Futuro**
+Investigações detalhadas revelaram a vulnerabilidade de sistemas complexos.
+Inscreva-se no canal para mais análises.
+"""
+    # Creating project with script should automatically create the 3 scenes
+    proj_res = await async_client.post(
+        "/api/v1/projects",
+        json={"name": "Projeto IA Chips", "language": "pt-BR", "script_raw": markdown_script},
+    )
+    assert proj_res.status_code == 201
+    project_id = proj_res.json()["id"]
+
+    # Verify scenes were automatically created and properly named
+    list_res = await async_client.get(f"/api/v1/projects/{project_id}/scenes")
+    assert list_res.status_code == 200
+    scenes = list_res.json()
+    assert len(scenes) == 3
+    assert scenes[0]["position"] == 1
+    assert "Início Inesperado" in scenes[0]["title"]
+    assert "transformaram o mundo" in scenes[0]["narration"]
+    assert "Ponto de Ruptura" in scenes[1]["title"]
+    assert "Desfecho" in scenes[2]["title"]
+

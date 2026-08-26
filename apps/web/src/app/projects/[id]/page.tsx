@@ -76,6 +76,12 @@ export default function ProjectWorkspacePage() {
     if (!project) return;
     const updated = await updateProject(project.id, { script_raw: newScript });
     setProject(updated);
+    try {
+      const updatedScenes = await listScenes(projectId);
+      setScenes(updatedScenes);
+    } catch {
+      // Ignora falha de listagem caso não haja cenas
+    }
     refreshMetrics();
   };
 

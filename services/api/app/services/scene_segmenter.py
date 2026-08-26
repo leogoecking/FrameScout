@@ -50,43 +50,59 @@ class ScriptSegmenter:
         if not script_raw or not script_raw.strip():
             return []
 
-        text = script_raw.strip()
+        # 1. Limpar títulos globais do topo (ex: # Título: ...)
+        clean_text = script_raw.strip()
+        clean_text = re.sub(
+            r"^(?:#+|\*\*|__)?\s*(?:T[ií]tulo|Title)\s*:\s*[^\n]+\n*",
+            "",
+            clean_text,
+            flags=re.IGNORECASE,
+        ).strip()
+
         scenes_data: List[dict] = []
 
-        # 1. Tentar divisão por cabeçalhos explícitos
-        scene_header_pattern = re.compile(
-            r"(?:^|\n+)[ \t]*(?:\[?(?:Cena|Scene|CENA|SCENE)\s*(\d+)[\:\-\]\s]+)"
-            r"(.*?)(?=(?:\n+[ \t]*\[?(?:Cena|Scene|CENA|SCENE)\s*\d+[\:\-\]\s]+)|$)",
-            re.DOTALL | re.IGNORECASE,
+        # 2. Tentar divisão por cabeçalhos explícitos (com suporte a markdown, bold, hashes, traços)
+        header_pattern = re.compile(
+            r"(?:^|\n+)[ \t]*(?:[#\*\-_>]*\s*\[?(?:Cena|Scene|CENA|SCENE)\s*"
+            r"(\d+)[\:\-\]\s\*\_]*)([^\n]*)",
+            re.IGNORECASE,
         )
 
-        matches = list(scene_header_pattern.finditer(text))
+        matches = list(header_pattern.finditer(clean_text))
 
-        if matches and len(matches) > 1:
-            for match in matches:
-                header_num = match.group(1)
-                content = match.group(2).strip()
+        if matches and len(matches) >= 1:
+            for i, match in enumerate(matches):
+                scene_num = int(match.group(1))
+                inline_title = match.group(2).strip().strip("*_#[]:- ")
+                start_idx = match.end()
+                end_idx = matches[i + 1].start() if i + 1 < len(matches) else len(clean_text)
+                content = clean_text[start_idx:end_idx].strip()
 
-                lines = [line.strip() for line in content.split("\n") if line.strip()]
-                if not lines:
-                    continue
+                title = f"Cena {scene_num:02d}"
+                if inline_title:
+                    title = f"Cena {scene_num:02d}: {inline_title}"
+                elif content:
+                    lines = [
+                        ln.strip().strip("*_#[]:- ") for ln in content.split("\n") if ln.strip()
+                    ]
+                    if lines and len(lines[0]) < 60 and len(lines) > 1:
+                        title = f"Cena {scene_num:02d}: {lines[0]}"
+                        content = "\n".join(lines[1:]).strip()
 
-                title = f"Cena {int(header_num):02d}"
-                narration = content
+                # Limpar markdown excessivo da narração
+                narration = re.sub(r"^\s*[\*\-_]{2,}\s*", "", content).strip()
+                narration = re.sub(r"\s*[\*\-_]{2,}\s*$", "", narration).strip()
 
-                if len(lines) > 1 and len(lines[0]) < 60:
-                    title = f"Cena {int(header_num):02d}: {lines[0]}"
-                    narration = "\n".join(lines[1:]).strip()
-
-                scenes_data.append(
-                    {
-                        "title": title,
-                        "narration": narration,
-                    }
-                )
+                if narration or title:
+                    scenes_data.append(
+                        {
+                            "title": title,
+                            "narration": narration or title,
+                        }
+                    )
         else:
-            # 2. Fallback: Divisão por blocos de parágrafos
-            paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
+            # 3. Fallback: Divisão por blocos de parágrafos
+            paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", clean_text) if p.strip()]
 
             if len(paragraphs) > 1:
                 for idx, paragraph in enumerate(paragraphs, start=1):
@@ -97,8 +113,8 @@ class ScriptSegmenter:
                         }
                     )
             else:
-                # 3. Fallback: Se for um bloco único longo, dividir a cada ~30 palavras
-                sentences = re.split(r"(?<=[.!?])\s+", text)
+                # 4. Fallback: Se for um bloco único longo, dividir a cada ~30 palavras
+                sentences = re.split(r"(?<=[.!?])\s+", clean_text)
                 current_chunk: List[str] = []
                 scene_counter = 1
 

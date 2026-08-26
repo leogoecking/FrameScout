@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Scene, SceneSplitRequest, SceneUpdate, SearchQuery } from "@/types";
 import { 
   createScene, 
@@ -48,6 +48,10 @@ export function SceneList({
   const [splitTargetScene, setSplitTargetScene] = useState<Scene | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setScenes(initialScenes);
+  }, [initialScenes]);
 
   const notifyUpdated = (newScenes: Scene[]) => {
     setScenes(newScenes);

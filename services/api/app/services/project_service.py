@@ -20,6 +20,14 @@ class ProjectService:
         db.add(project)
         await db.commit()
         await db.refresh(project)
+
+        # Se houver roteiro inicial, segmentar e gerar cenas automaticamente
+        if obj_in.script_raw and obj_in.script_raw.strip():
+            from app.services.scene_service import SceneService
+
+            await SceneService.generate_from_script(db, project.id)
+            await db.refresh(project)
+
         return project
 
     @staticmethod
